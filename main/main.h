@@ -25,11 +25,12 @@
 #include "freertos/task.h"
 
 // Framework Libraries (ESP-IDF).
-#include "driver/rmt.h"
+
 
 // Project libraries (climaQ).
-// #include "Mqtt_Control/MqttCtrl.h"
-// #include "Periph_Control/LedCtrl.h"
+#include "Mqtt_Control/WifiCtrl.h"
+#include "Mqtt_Control/MqttCtrl.h"
 #include "Periph_Control/ButtonCtrl.h"
+#include "Periph_Control/LedCtrl.h"
 
 #endif

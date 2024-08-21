@@ -1,99 +1,175 @@
 /**
  * @file MqttCtrl.c
- * @author your name (you@domain.com)
- * @brief
+ * @author Tiago Zenerato (dr.zenerato@gmail.com)
+ * @brief Implementação da biblioteca para gerenciamento de MQTT com ESP32-S3.
+ *
+ * @details
+ * Esta biblioteca fornece funções para inicializar a conexão MQTT, publicar e se inscrever em tópicos.
+ *
  * @version 0.1
- * @date 2024-08-18
+ * @date 2024-08-20
  *
  * @copyright Copyright (c) 2024
  *
  */
+
 #include "MqttCtrl.h"
 
-#define WIFI_SSID "ZENA2007"
-#define WIFI_PASS "m130856z"
+static esp_mqtt_client_handle_t client = NULL;
+static const char *TAG = "MQTT_LIB";
 
-#define BROKER_URL "broker.hivemq.com"
-#define TOPIC_PUBLISH "testtopic/1"
-#define TOPIC_SUBSCRIBE "testtopic/#sub"
-
-static esp_event_handler_instance_t instance_any_id;
-static esp_event_handler_instance_t instance_got_ip_id;
-
-static void event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
-
-static void wifi_init_sta(void) 
+/**
+ * @brief Callback para eventos MQTT.
+ *
+ * @param client Cliente MQTT.
+ * @param event Evento MQTT.
+ */
+static void mqtt_event_handler(esp_mqtt_event_handle_t event)
 {
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL, &instance_got_ip_id));
-
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS,
-        },
-    };
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-}
-
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
-    esp_mqtt_event_handle_t event = event_data;
-    switch (event_id) {
-        case MQTT_EVENT_CONNECTED:
-            ESP_LOGI("MQTT", "Connected to broker");
-            ESP_ERROR_CHECK(esp_mqtt_client_subscribe(event->client, TOPIC_SUBSCRIBE, 0));
-            break;
-        case MQTT_EVENT_DATA:
-            printf("Received message: %.*s\n", event->data_len, event->data);
-            break;
-        default:
-            break;
+    switch (event->event_id)
+    {
+    case MQTT_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        break;
+    case MQTT_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        break;
+    case MQTT_EVENT_SUBSCRIBED:
+        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, topic=%s, msg_id=%d", event->topic, event->msg_id);
+        break;
+    case MQTT_EVENT_UNSUBSCRIBED:
+        ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, topic=%s, msg_id=%d", event->topic, event->msg_id);
+        break;
+    case MQTT_EVENT_PUBLISHED:
+        ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+        break;
+    case MQTT_EVENT_DATA:
+        ESP_LOGI(TAG, "MQTT_EVENT_DATA, topic=%s, len=%d", event->topic, event->data_len);
+        break;
+    default:
+        ESP_LOGI(TAG, "Other MQTT event id:%d", event->event_id);
+        break;
     }
 }
 
-static void mqtt_app_start(void) {
-
+/**
+ * @brief Inicializa o cliente MQTT e conecta ao broker.
+ *
+ * Esta função deve ser chamada antes de qualquer outra operação MQTT.
+ *
+ * @param uri URI do broker MQTT.
+ * @return esp_err_t Retorna ESP_OK se a inicialização for bem-sucedida.
+ */
+esp_err_t mqtt_init(const char *uri, uint16_t port_use_connect)
+{
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = BROKER_URL, 
-        .broker.address.port = 8884,
+        .broker.address.uri = uri,
+        .broker.address.port = port_use_connect,
         .broker.address.transport = MQTT_TRANSPORT_OVER_TCP,
     };
 
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client));
-    ESP_ERROR_CHECK(esp_mqtt_client_start(client));
-
-    // Publish a message
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddStringToObject(json, "key", "value");
-    char *json_str = cJSON_Print(json);
-    ESP_ERROR_CHECK(esp_mqtt_client_publish(client, TOPIC_PUBLISH, json_str, 0, 1, 0));
-    free(json_str);
-    cJSON_Delete(json);
-}
-
-static void event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
-    if (base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGI("WIFI", "Disconnected from Wi-Fi, reconnecting...");
-        esp_wifi_connect();
-    } else if (base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-        ESP_LOGI("WIFI", "Got IP Address: " IPSTR, IP2STR(&event->ip_info.ip));
-        esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id);
-        esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip_id);
-        mqtt_app_start();
+    client = esp_mqtt_client_init(&mqtt_cfg);
+    if (client == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to initialize MQTT client");
+        return ESP_FAIL;
     }
+
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+
+    esp_err_t err = esp_mqtt_client_start(client);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to start MQTT client");
+        return err;
+    }
+
+    return ESP_OK;
 }
 
-void MqttCtrlAllInit(void) {
-    ESP_ERROR_CHECK(nvs_flash_init());
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    wifi_init_sta();
+/**
+ * @brief Publica uma mensagem em um tópico específico.
+ *
+ * @param topic Tópico onde a mensagem será publicada.
+ * @param payload Dados a serem enviados.
+ * @param len Comprimento dos dados a serem enviados.
+ * @return esp_err_t Retorna ESP_OK se a publicação for bem-sucedida.
+ */
+esp_err_t mqtt_publish(const char *topic, const char *payload, int len)
+{
+    if (client == NULL)
+    {
+        ESP_LOGE(TAG, "MQTT client not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    int msg_id = esp_mqtt_client_publish(client, topic, payload, len, 1, 0);
+    if (msg_id == -1)
+    {
+        ESP_LOGE(TAG, "Failed to publish message");
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Inscreve-se em um tópico específico.
+ *
+ * @param topic Tópico ao qual se inscrever.
+ * @return esp_err_t Retorna ESP_OK se a inscrição for bem-sucedida.
+ */
+esp_err_t mqtt_subscribe(const char *topic)
+{
+    if (client == NULL)
+    {
+        ESP_LOGE(TAG, "MQTT client not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    int msg_id = esp_mqtt_client_subscribe(client,(char *) topic, 0);
+    if (msg_id == -1)
+    {
+        ESP_LOGE(TAG, "Failed to subscribe to topic");
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Desinscreve-se de um tópico específico.
+ *
+ * @param topic Tópico ao qual se desinscrever.
+ * @return esp_err_t Retorna ESP_OK se a desinscrição for bem-sucedida.
+ */
+esp_err_t mqtt_unsubscribe(const char *topic)
+{
+    if (client == NULL)
+    {
+        ESP_LOGE(TAG, "MQTT client not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    int msg_id = esp_mqtt_client_unsubscribe(client, topic);
+    if (msg_id == -1)
+    {
+        ESP_LOGE(TAG, "Failed to unsubscribe from topic");
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Desconecta o cliente MQTT e libera os recursos.
+ */
+void mqtt_deinit(void)
+{
+    if (client != NULL)
+    {
+        esp_mqtt_client_stop(client);
+        esp_mqtt_client_destroy(client);
+        client = NULL;
+    }
 }

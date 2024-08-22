@@ -18,9 +18,9 @@ const char *ssid = "ZENA2007";
 const char *password = "m130856z";
 
 // Detalhes do broker MQTT
-const char* mqtt_server = "broker.hivemq.com";
-const int mqtt_port = 8884; // Porta fornecida
-const char* mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
+const char *mqtt_server = "broker.hivemq.com";
+const int mqtt_port = 8884;                         // Porta fornecida
+const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
 
 /**
  * @brief Set the AllTasksCore 0 object
@@ -79,6 +79,12 @@ bool wifi_start_all(void)
     }
 }
 
+/**
+ * @brief
+ *
+ * @return true
+ * @return false
+ */
 bool mqtt_start_all(void)
 {
     // Inicialize o cliente MQTT
@@ -108,17 +114,41 @@ bool mqtt_start_all(void)
     return true;
 }
 
+bool led_onBoard_set_and_init(void)
+{
+    led_ctrl_config_t led_config = {
+        .gpio_num = 48,                 // GPIO48
+        .channel = LEDC_CHANNEL_0,      // Canal PWM
+        .resolution = LEDC_TIMER_8_BIT, // Resolução de 8 bits
+        .frequency = 5000               // Frequência de 5 kHz
+    };
+
+    if (led_ctrl_init(&led_config) == ESP_OK)
+    {
+        ESP_LOGI("MAIN", "LED inicializado com sucesso");
+    }
+    else{
+        ESP_LOGE("MAIN", "Falha ao inicializar o LED");
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * @brief
  *
  */
 void app_main(void)
 {
+    led_onBoard_set_and_init();
     wifi_start_all();
     mqtt_start_all();
 
     while (true)
     {
+        led_ctrl_set_color(255, 0, 0); // Acender LED em vermelho
         vTaskDelay(pdMS_TO_TICKS(1000)); // Delay para evitar uso excessivo da CPU
+        led_ctrl_off(); // Desligar LED
     }
 }

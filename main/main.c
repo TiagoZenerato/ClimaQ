@@ -34,7 +34,7 @@ const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
  */
 void setAllTasksCore_0(void)
 {
-    // xTaskCreatePinnedToCore(serviceRGB, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
+    xTaskCreatePinnedToCore(led_blink_rgb_teste, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
     // xTaskCreatePinnedToCore(serviceRGB, "TaskLedRGB", 2048, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
 }
 
@@ -120,38 +120,15 @@ bool mqtt_start_all(void)
     return true;
 }
 
-bool led_onBoard_set_and_init(void)
-{
-    led_strip_handle_t led_strip = configure_led();
-
-    return true;
-}
-
-
 void app_main(void)
 {
-    
-    bool led_on_off = false;
-
-    ESP_LOGI(TAG, "Start blinking LED strip");
+    if(configure_led() != ESP_OK){
+        ESP_LOGE(TAG,"Erro na configuracao do led RGB");
+    }
     wifi_start_all();
     mqtt_start_all();
+    setAllTasksCore_0();
     while (1) {
-        if (led_on_off) {
-            /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
-            for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 30, 0, 0));
-            }
-            /* Refresh the strip to send data */
-            ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-            ESP_LOGI(TAG, "LED ON!");
-        } else {
-            /* Set all LED off to clear all pixels */
-            ESP_ERROR_CHECK(led_strip_clear(led_strip));
-            ESP_LOGI(TAG, "LED OFF!");
-        }
-
-        led_on_off = !led_on_off;
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }

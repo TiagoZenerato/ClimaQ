@@ -28,10 +28,35 @@
 #include "led_strip.h"
 #include "led_strip_interface.h"
 
-#define LED_STRIP_BLINK_GPIO  48 // GPIO assignment
-#define LED_STRIP_LED_NUMBERS 1 // Numbers of the LED in the strip
-#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000) // 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
+#define LED_STRIP_BLINK_GPIO 48                 // GPIO assignment
+#define LED_STRIP_LED_NUMBERS 1                 // Numbers of the LED in the strip
+#define LED_STRIP_RMT_RES_HZ (10 * 1000 * 1000) // 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
 
-led_strip_handle_t configure_led(void);
+// Estados possíveis para o led
+typedef enum
+{
+    OFF,
+    RED,
+    GREEN,
+    BLUE,
+    WHITE
+} LED_RGB_STATE;
+
+// Modos de operação para o led
+typedef enum
+{
+    WAITING_CONNECT,
+    CONNECTED,
+    ERRO,
+    NEW_DATA_SEND,
+    RECEIVED_COMMAND
+} LED_RGB_MODE;
+
+// funções de uso externo
+esp_err_t led_ctrl_init(void);
+uint8_t led_ctrl_get_state(void);
+void led_ctrl_set_mode(uint8_t mode);
+void led_ctrl_set_state(uint8_t state);
+uint8_t led_ctrl_get_mode(void);
 
 #endif

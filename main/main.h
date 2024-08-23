@@ -25,7 +25,8 @@
 #include "freertos/task.h"
 
 // Framework Libraries (ESP-IDF).
-
+#include "led_strip.h"
+#include "led_strip_interface.h"
 
 // Project libraries (climaQ).
 #include "Mqtt_Control/WifiCtrl.h"

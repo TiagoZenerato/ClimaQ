@@ -22,6 +22,12 @@ const char *mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 8884;                         // Porta fornecida
 const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
 
+#define LED_STRIP_RMT_CHANNEL    RMT_CHANNEL_0
+#define LED_STRIP_GPIO           48  // Pino GPIO onde o WS2812 está conectado
+#define LED_STRIP_NUM_PIXELS     1   // Número de LEDs
+
+
+
 /**
  * @brief Set the AllTasksCore 0 object
  *
@@ -116,39 +122,36 @@ bool mqtt_start_all(void)
 
 bool led_onBoard_set_and_init(void)
 {
-    led_ctrl_config_t led_config = {
-        .gpio_num = 48,                 // GPIO48
-        .channel = LEDC_CHANNEL_0,      // Canal PWM
-        .resolution = LEDC_TIMER_8_BIT, // Resolução de 8 bits
-        .frequency = 5000               // Frequência de 5 kHz
-    };
-
-    if (led_ctrl_init(&led_config) == ESP_OK)
-    {
-        ESP_LOGI("MAIN", "LED inicializado com sucesso");
-    }
-    else{
-        ESP_LOGE("MAIN", "Falha ao inicializar o LED");
-        return false;
-    }
+    led_strip_handle_t led_strip = configure_led();
 
     return true;
 }
 
-/**
- * @brief
- *
- */
+
 void app_main(void)
 {
-    led_onBoard_set_and_init();
+    
+    bool led_on_off = false;
+
+    ESP_LOGI(TAG, "Start blinking LED strip");
     wifi_start_all();
     mqtt_start_all();
+    while (1) {
+        if (led_on_off) {
+            /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
+            for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++) {
+                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 30, 0, 0));
+            }
+            /* Refresh the strip to send data */
+            ESP_ERROR_CHECK(led_strip_refresh(led_strip));
+            ESP_LOGI(TAG, "LED ON!");
+        } else {
+            /* Set all LED off to clear all pixels */
+            ESP_ERROR_CHECK(led_strip_clear(led_strip));
+            ESP_LOGI(TAG, "LED OFF!");
+        }
 
-    while (true)
-    {
-        led_ctrl_set_color(255, 0, 0); // Acender LED em vermelho
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Delay para evitar uso excessivo da CPU
-        led_ctrl_off(); // Desligar LED
+        led_on_off = !led_on_off;
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }

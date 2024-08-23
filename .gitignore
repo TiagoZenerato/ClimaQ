@@ -55,3 +55,5 @@ dkms.conf
 /build
 /components
 .vscode/
+/managed_components
+dependencies.lock

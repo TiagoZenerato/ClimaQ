@@ -23,22 +23,15 @@
 #include "freertos/task.h"
 
 // Framework Libraries (ESP-IDF).
-#include "driver/ledc.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "led_strip.h"
+#include "led_strip_interface.h"
 
-// Estrutura para armazenar as configurações do LED
-typedef struct
-{
-    int gpio_num;   // GPIO onde o LED está conectado
-    int channel;    // Canal PWM utilizado
-    int resolution; // Resolução do PWM
-    int frequency;  // Frequência do PWM
-} led_ctrl_config_t;
+#define LED_STRIP_BLINK_GPIO  48 // GPIO assignment
+#define LED_STRIP_LED_NUMBERS 1 // Numbers of the LED in the strip
+#define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000) // 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
 
-extern led_ctrl_config_t led_config;
-esp_err_t led_ctrl_off(void);                                           // Função para desligar o LED
-esp_err_t led_ctrl_init(led_ctrl_config_t *config);                     // Função para inicializar o controle do LED
-esp_err_t led_ctrl_set_color(uint8_t red, uint8_t green, uint8_t blue); // Função para definir a cor do LED (em formato RGB)
+led_strip_handle_t configure_led(void);
 
 #endif

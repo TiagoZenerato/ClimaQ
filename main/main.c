@@ -23,9 +23,7 @@ const char *mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 8884;                         // Porta fornecida
 const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
 
-#define LED_STRIP_RMT_CHANNEL RMT_CHANNEL_0
-#define LED_STRIP_GPIO 48      // Pino GPIO onde o WS2812 está conectado
-#define LED_STRIP_NUM_PIXELS 1 // Número de LEDs
+dht22_data_t sensor_data;
 
 void status_report_app(void *pvParameters)
 {
@@ -144,6 +142,19 @@ int get_random_number(int min, int max)
     return min + (esp_random() % (max - min));
 }
 
+void dht_sensor_app(dht22_data_t *data)
+{
+    esp_err_t result = dht22_read(data);
+    if (result == ESP_OK)
+    {
+        ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+    }
+    else
+    {
+        ESP_LOGE("DHT22", "Failed to read from DHT22 sensor");
+    }
+}
+
 void app_main(void)
 {
     init_button();
@@ -162,6 +173,8 @@ void app_main(void)
         led_ctrl_set_mode(ERRO);
     }
 
+    ESP_ERROR_CHECK(dht22_init(DHT22_GPIO));
+
     while (true)
     {
         if (btState)
@@ -171,6 +184,8 @@ void app_main(void)
             led_ctrl_set_state(get_random_number(0, 5));
             btState = false;
         }
+
+        dht_sensor_app(&sensor_data);
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }

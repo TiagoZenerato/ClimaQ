@@ -35,5 +35,6 @@
 #include "Mqtt_Control/MqttCtrl.h"
 #include "Periph_Control/ButtonCtrl.h"
 #include "Periph_Control/LedCtrl.h"
+#include "Sensor_Control/Dht22.h"
 
 #endif

@@ -105,7 +105,7 @@ esp_err_t mqtt_start_all(void)
     // iniciando o wifi.
     if (wifi_start_all())
     {
-        ESP_LOGE(TAG, "Failed to initialize MQTT");
+        ESP_LOGE(TAG, "Failed to initialize WIFI");
         return ESP_FAIL;
     }
 

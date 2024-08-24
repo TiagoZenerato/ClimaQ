@@ -33,6 +33,13 @@
 #define DHT22_LONG_TIMEOUT   2000
 #define DHT22_SHORT_TIMEOUT  500
 
+#define DHT22_PULLUP_DELAY  40  // Delay após pull-up em microssegundos
+#define DHT22_LOW_PULSE      80  // Tempo do pulso baixo em microssegundos
+#define DHT22_HIGH_PULSE     80  // Tempo do pulso alto em microssegundos
+#define DHT22_BIT0           26  // Tempo para bit 0 em microssegundos
+#define DHT22_BIT1           73  // Tempo para bit 1 em microssegundos
+#define DHT22_TIMEOUT        1000 // Timeout em microssegundos
+
 typedef struct {
     float temperature;
     float humidity;

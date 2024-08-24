@@ -12,7 +12,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#define VERSION_CTRL_FW 001
+#define VERSION_CTRL_FW 112
 
 // language libraries (C).
 #include <stdio.h>
@@ -25,8 +25,10 @@
 #include "freertos/task.h"
 
 // Framework Libraries (ESP-IDF).
-#include "led_strip.h"
-#include "led_strip_interface.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "esp_timer.h"
+#include "esp_system.h"
 
 // Project libraries (climaQ).
 #include "Mqtt_Control/WifiCtrl.h"

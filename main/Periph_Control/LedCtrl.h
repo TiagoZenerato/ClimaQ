@@ -39,7 +39,7 @@ typedef enum
     RED,
     GREEN,
     BLUE,
-    WHITE
+    YELLOW,
 } LED_RGB_STATE;
 
 // Modos de operação para o led
@@ -54,9 +54,10 @@ typedef enum
 
 // funções de uso externo
 esp_err_t led_ctrl_init(void);
+uint8_t led_ctrl_get_mode(void);
 uint8_t led_ctrl_get_state(void);
 void led_ctrl_set_mode(uint8_t mode);
 void led_ctrl_set_state(uint8_t state);
-uint8_t led_ctrl_get_mode(void);
+void led_ctrl_app(void *pvParameters); 
 
 #endif

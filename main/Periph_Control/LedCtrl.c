@@ -167,12 +167,12 @@ void led_ctrl_blue_state(void)
  * @brief
  *
  */
-void led_ctrl_white_state(void)
+void led_ctrl_yellow_state(void)
 {
-    // Set the LED color white
+    // Set the LED color yellow
     for (int i = 0; i < LED_STRIP_LED_NUMBERS; i++)
     {
-        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 150, 150, 150));
+        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, i, 150, 80, 0));
     }
 
     // Refresh the strip to send data
@@ -189,6 +189,7 @@ void led_ctrl_waiting_connect_mode(void)
     led_ctrl_blue_state();
     vTaskDelay(pdMS_TO_TICKS(500));
     led_ctrl_off_state();
+    vTaskDelay(pdMS_TO_TICKS(500));
 }
 
 /**
@@ -198,7 +199,7 @@ void led_ctrl_waiting_connect_mode(void)
 void led_ctrl_connected_mode(void)
 {
     led_ctrl_green_state();
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(320));
     led_ctrl_off_state();
 }
 
@@ -206,11 +207,47 @@ void led_ctrl_connected_mode(void)
  * @brief
  *
  */
-void led_ctrl_erro_mode(void)
-{
-    led_ctrl_red_state();
-    vTaskDelay(pdMS_TO_TICKS(80));
-    led_ctrl_off_state();
+// Modo de erro, piscando o LED vermelho
+void led_ctrl_erro_mode(void) {
+    static uint8_t contErroLedshow = 0;
+    static TickType_t lastWakeTime = 0;
+    static int state = 0;  // Estado da máquina de estados
+
+    switch (state) {
+        case 0:
+            // Inicia o ciclo piscando o LED vermelho
+            led_ctrl_red_state();
+            lastWakeTime = xTaskGetTickCount();
+            state = 1;
+            break;
+
+        case 1:
+            // Espera 550 ms com o LED vermelho ligado
+            if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(550)) {
+                led_ctrl_off_state();
+                lastWakeTime = xTaskGetTickCount();
+                state = 2;
+            }
+            break;
+
+        case 2:
+            // Espera 250 ms com o LED desligado
+            if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(250)) {
+                contErroLedshow++;
+                if (contErroLedshow < 4) {
+                    state = 0;  // Repete o ciclo
+                } else {
+                    contErroLedshow = 0;  // Reseta o contador
+                    state = 3;  // Fim do ciclo de 4 piscadas
+                }
+            }
+            break;
+
+        case 3:
+            // Finaliza o ciclo de piscadas
+            state = 0;  // Reset para próximo ciclo
+            break;
+    }
 }
 
 /**
@@ -219,30 +256,63 @@ void led_ctrl_erro_mode(void)
  */
 void led_ctrl_new_data_send_mode(void)
 {
+    led_ctrl_blue_state();
+    vTaskDelay(pdMS_TO_TICKS(500));
+    led_ctrl_off_state();
 }
 
 #endif
 
-void led_ctrl_app(void)
+void led_ctrl_app(void *pvParameters)
 {
     ESP_LOGI(TAG, "Started main LED RGB control application");
     while (true)
     {
-        if (state_led_rgb == RECEIVED_COMMAND)
+        switch (mode_led_rgb)
         {
-
+        case WAITING_CONNECT:
+            led_ctrl_waiting_connect_mode();
+            break;
+        case CONNECTED:
+            led_ctrl_connected_mode();
+            break;
+        case ERRO:
+            led_ctrl_erro_mode();
+            break;
+        case NEW_DATA_SEND:
+            led_ctrl_new_data_send_mode();
+            break;
+        case RECEIVED_COMMAND:
             switch (state_led_rgb)
             {
-                case OFF:
-                    
+            case OFF:
+                led_ctrl_off_state();
                 break;
-
-                default:
+            case RED:
+                led_ctrl_red_state();
+                break;
+            case GREEN:
+                led_ctrl_green_state();
+                break;
+            case BLUE:
+                led_ctrl_blue_state();
+                break;
+            case YELLOW:
+                led_ctrl_yellow_state();
+                break;
+            default:
+                led_ctrl_off_state();
+                led_ctrl_set_mode(ERRO);
+                ESP_LOGE(TAG, "Status requested incorrect or to be implemented");
                 break;
             }
+            break;
+        default:
+            mode_led_rgb = ERRO;
+            ESP_LOGE(TAG, "Non-existent operating mode");
+            break;
         }
-
-        vTaskDelay(pdMS_TO_TICKS(80));
+        vTaskDelay(pdMS_TO_TICKS(10)); // Verificando a cada 10 ms (100Hz)
     }
 }
 

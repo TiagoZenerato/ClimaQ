@@ -12,6 +12,7 @@
 #include "main.h"
 
 static const char *TAG = "MAIN";
+static const char *TAG_REPORT = "[SYS-INFO]";
 
 // Conectar-se a uma rede Wi-Fi
 const char *ssid = "ZENA2007";
@@ -22,11 +23,20 @@ const char *mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 8884;                         // Porta fornecida
 const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
 
-#define LED_STRIP_RMT_CHANNEL    RMT_CHANNEL_0
-#define LED_STRIP_GPIO           48  // Pino GPIO onde o WS2812 está conectado
-#define LED_STRIP_NUM_PIXELS     1   // Número de LEDs
+#define LED_STRIP_RMT_CHANNEL RMT_CHANNEL_0
+#define LED_STRIP_GPIO 48      // Pino GPIO onde o WS2812 está conectado
+#define LED_STRIP_NUM_PIXELS 1 // Número de LEDs
 
-
+void status_report_app(void *pvParameters)
+{
+    uint8_t cont_report_send = 0;
+    while (true)
+    {
+        printf("\e[1;1H\e[2J"); // limpar todo o terminal
+        ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) ---> |ClimaQ| ----> |VER: %i| -----> |P2G-\u2665| ", cont_report_send++, VERSION_CTRL_FW);
+        vTaskDelay(pdMS_TO_TICKS(3000)); // A cada 3s
+    }
+}
 
 /**
  * @brief Set the AllTasksCore 0 object
@@ -34,8 +44,8 @@ const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
  */
 void setAllTasksCore_0(void)
 {
-    xTaskCreatePinnedToCore(led_blink_rgb_teste, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
-    // xTaskCreatePinnedToCore(serviceRGB, "TaskLedRGB", 2048, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
+    // xTaskCreatePinnedToCore(led_ctrl_app, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
+    xTaskCreatePinnedToCore(status_report_app, "TaskStatusReport", 2048, NULL, 1, NULL, 0); //
 }
 
 /**
@@ -44,17 +54,17 @@ void setAllTasksCore_0(void)
  */
 void setAllTasksCore_1(void)
 {
-    // xTaskCreatePinnedToCore(serviceRGB, "TaskLedRGB", 2048, NULL, 1, NULL, 1); // Led RGB (NeoPixel) service
+    xTaskCreatePinnedToCore(led_ctrl_app, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
     // xTaskCreatePinnedToCore(serviceRGB, "TaskLedRGB", 2048, NULL, 1, NULL, 1); // Led RGB (NeoPixel) service
 }
 
 /**
  * @brief
  *
- * @return true
- * @return false
+ * @return ESP_OK
+ * @return ESP_FAIL
  */
-bool wifi_start_all(void)
+esp_err_t wifi_start_all(void)
 {
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
 
@@ -62,73 +72,106 @@ bool wifi_start_all(void)
     if (wifi_manager_init() != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to initialize Wi-Fi manager");
-        return false;
+        led_ctrl_set_mode(ERRO);
+        return ESP_FAIL;
     }
 
     ESP_LOGI(TAG, "Attempting to connect to SSID: %s", ssid);
     if (wifi_manager_connect(ssid, password) != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to connect to Wi-Fi");
-        return false;
+        return ESP_FAIL;
     }
 
     // Verificar se está conectado
     if (wifi_manager_is_connected())
     {
         ESP_LOGI(TAG, "Successfully connected to Wi-Fi");
-        return true;
+        return ESP_OK;
     }
     else
     {
         ESP_LOGI(TAG, "Not connected to Wi-Fi");
-        return false;
+        return ESP_FAIL;
     }
 }
 
 /**
  * @brief
  *
- * @return true
- * @return false
+ * @return ESP_OK
+ * @return ESP_FAIL
  */
-bool mqtt_start_all(void)
+esp_err_t mqtt_start_all(void)
 {
+    // iniciando o wifi.
+    if (wifi_start_all())
+    {
+        ESP_LOGE(TAG, "Failed to initialize MQTT");
+        return ESP_FAIL;
+    }
+
     // Inicialize o cliente MQTT
     if (mqtt_init(mqtt_server, mqtt_port) != ESP_OK)
     {
-        ESP_LOGE("MAIN", "Failed to initialize MQTT");
-        return false;
+        ESP_LOGE(TAG, "Failed to initialize MQTT");
+        return ESP_FAIL;
     }
 
     // Inscreva-se em um tópico
     if (mqtt_subscribe("test/topic") != ESP_OK)
     {
-        ESP_LOGE("MAIN", "Failed to subscribe to topic");
-        return false;
+        ESP_LOGE(TAG, "Failed to subscribe to topic");
+        return ESP_FAIL;
     }
 
     // Publique uma mensagem
     if (mqtt_publish("test/topic", "Hello, world!", strlen("Hello, world!")) != ESP_OK)
     {
-        ESP_LOGE("MAIN", "Failed to publish message");
-        return false;
+        ESP_LOGE(TAG, "Failed to publish message");
+        return ESP_FAIL;
     }
 
     // Lembre-se de desalocar recursos ao final
     mqtt_deinit();
 
-    return true;
+    return ESP_OK;
+}
+
+int get_random_number(int min, int max)
+{
+    // Return a random number in the range [min, max)
+    return min + (esp_random() % (max - min));
 }
 
 void app_main(void)
 {
-    if(configure_led() != ESP_OK){
-        ESP_LOGE(TAG,"Erro na configuracao do led RGB");
+    init_button();
+
+    if (led_ctrl_init() != ESP_OK)
+    {
+        ESP_LOGE(TAG, "A configuracao do led RGB falhou..");
     }
-    wifi_start_all();
-    mqtt_start_all();
+
     setAllTasksCore_0();
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(500));
+    setAllTasksCore_1();
+
+    if (mqtt_start_all() != ESP_OK)
+    {
+        ESP_LOGE(TAG, "A inicializacao do serviço de mqtt/wifi falhou...");
+        led_ctrl_set_mode(ERRO);
+    }
+
+    while (true)
+    {
+        if (btState)
+        {
+            led_ctrl_set_mode(RECEIVED_COMMAND);
+            vTaskDelay(pdMS_TO_TICKS(20));
+            led_ctrl_set_state(get_random_number(0, 5));
+            btState = false;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }

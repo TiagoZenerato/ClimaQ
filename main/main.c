@@ -11,7 +11,7 @@
 
 #include "main.h"
 
-// 
+//
 static const char *TAG = "MAIN";
 static const char *TAG_REPORT = "[SYS-INFO]";
 
@@ -20,7 +20,7 @@ const char *ssid = "ZENA2007";
 const char *password = "m130856z";
 
 // Detalhes do broker MQTT
-const char *mqtt_server = "broker.hivemq.com"; //
+const char *mqtt_server = "broker.hivemq.com";      // url do broker
 const int mqtt_port = 8884;                         // Porta fornecida
 const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
 

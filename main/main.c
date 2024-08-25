@@ -26,6 +26,12 @@ const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
 
 dht22_data_t sensor_data;
 
+int get_random_number(int min, int max)
+{
+    // Return a random number in the range [min, max)
+    return min + (esp_random() % (max - min));
+}
+
 void status_report_app(void *pvParameters)
 {
     uint8_t cont_report_send = 0;
@@ -57,7 +63,9 @@ void dht_sensor_app(void)
  *
  */
 void setAllTasksCore_0(void)
-{
+{ 
+    // relatorio e o botao
+
     // xTaskCreatePinnedToCore(led_ctrl_app, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
     xTaskCreatePinnedToCore(status_report_app, "TaskStatusReport", 2048, NULL, 1, NULL, 0); //
 }
@@ -68,6 +76,7 @@ void setAllTasksCore_0(void)
  */
 void setAllTasksCore_1(void)
 {
+    
     xTaskCreatePinnedToCore(led_ctrl_app, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
     // xTaskCreatePinnedToCore(serviceRGB, "TaskLedRGB", 2048, NULL, 1, NULL, 1); // Led RGB (NeoPixel) service
 }
@@ -152,12 +161,6 @@ esp_err_t mqtt_start_all(void)
     return ESP_OK;
 }
 
-int get_random_number(int min, int max)
-{
-    // Return a random number in the range [min, max)
-    return min + (esp_random() % (max - min));
-}
-
 void app_main(void)
 {
     init_button();
@@ -180,9 +183,7 @@ void app_main(void)
     {
         if (btState)
         {
-            led_ctrl_set_mode(RECEIVED_COMMAND);
-            vTaskDelay(pdMS_TO_TICKS(20));
-            led_ctrl_set_state(get_random_number(0, 5));
+            led_ctrl_random_color(); 
             btState = false;
         }
 

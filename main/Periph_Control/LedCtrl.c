@@ -13,92 +13,11 @@
 
 static const char *TAG = "LedCtrl";
 
-// Variáveis de controle para operação do led
+// Variáveis de controle para operação do led.
 static uint8_t state_led_rgb = 0;
 static uint8_t mode_led_rgb = 0;
 
 led_strip_handle_t led_strip; // estrutura de controle
-
-/**
- * @brief
- *
- */
-#ifndef EXTERNAL_LIB_FUNCTION
-/**
- * @brief
- *
- * @return esp_err_t
- */
-esp_err_t led_ctrl_init(void)
-{
-    // LED strip general initialization, according to your led board design
-    led_strip_config_t strip_config = {
-        .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
-        .max_leds = LED_STRIP_LED_NUMBERS,        // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
-        .led_model = LED_MODEL_WS2812,            // LED strip model
-        .flags.invert_out = false,                // whether to invert the output signal
-    };
-
-    // LED strip backend configuration: RMT
-    led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-        .rmt_channel = 0,
-#else
-        .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
-        .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
-        .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
-#endif
-    };
-
-    // LED Strip object handle
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
-    ESP_LOGI(TAG, "Created LED strip object with RMT backend");
-
-    return ESP_OK;
-}
-
-/**
- * @brief
- *
- * @param state
- */
-void led_ctrl_set_state(uint8_t state)
-{
-    state_led_rgb = state;
-}
-
-/**
- * @brief
- *
- * @return uint8_t
- */
-uint8_t led_ctrl_get_state(void)
-{
-    return state_led_rgb;
-}
-
-/**
- * @brief
- *
- * @param mode
- */
-void led_ctrl_set_mode(uint8_t mode)
-{
-    mode_led_rgb = mode;
-}
-
-/**
- * @brief
- *
- * @return uint8_t
- */
-uint8_t led_ctrl_get_mode(void)
-{
-    return mode_led_rgb;
-}
-
-#endif
 
 /**
  * @brief
@@ -204,49 +123,55 @@ void led_ctrl_connected_mode(void)
 }
 
 /**
- * @brief
+ * @brief  Modo de erro, piscando o LED vermelho
  *
  */
-// Modo de erro, piscando o LED vermelho
-void led_ctrl_erro_mode(void) {
+void led_ctrl_erro_mode(void)
+{
     static uint8_t contErroLedshow = 0;
     static TickType_t lastWakeTime = 0;
-    static int state = 0;  // Estado da máquina de estados
+    static int state = 0; // Estado da máquina de estados
 
-    switch (state) {
-        case 0:
-            // Inicia o ciclo piscando o LED vermelho
-            led_ctrl_red_state();
+    switch (state)
+    {
+    case 0:
+        // Inicia o ciclo piscando o LED vermelho
+        led_ctrl_red_state();
+        lastWakeTime = xTaskGetTickCount();
+        state = 1;
+        break;
+
+    case 1:
+        // Espera 550 ms com o LED vermelho ligado
+        if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(550))
+        {
+            led_ctrl_off_state();
             lastWakeTime = xTaskGetTickCount();
-            state = 1;
-            break;
+            state = 2;
+        }
+        break;
 
-        case 1:
-            // Espera 550 ms com o LED vermelho ligado
-            if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(550)) {
-                led_ctrl_off_state();
-                lastWakeTime = xTaskGetTickCount();
-                state = 2;
+    case 2:
+        // Espera 250 ms com o LED desligado
+        if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(250))
+        {
+            contErroLedshow++;
+            if (contErroLedshow < 4)
+            {
+                state = 0; // Repete o ciclo
             }
-            break;
-
-        case 2:
-            // Espera 250 ms com o LED desligado
-            if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(250)) {
-                contErroLedshow++;
-                if (contErroLedshow < 4) {
-                    state = 0;  // Repete o ciclo
-                } else {
-                    contErroLedshow = 0;  // Reseta o contador
-                    state = 3;  // Fim do ciclo de 4 piscadas
-                }
+            else
+            {
+                contErroLedshow = 0; // Reseta o contador
+                state = 3;           // Fim do ciclo de 4 piscadas
             }
-            break;
+        }
+        break;
 
-        case 3:
-            // Finaliza o ciclo de piscadas
-            state = 0;  // Reset para próximo ciclo
-            break;
+    case 3:
+        // Finaliza o ciclo de piscadas
+        state = 0; // Reset para próximo ciclo
+        break;
     }
 }
 
@@ -261,6 +186,97 @@ void led_ctrl_new_data_send_mode(void)
     led_ctrl_off_state();
 }
 
+#endif
+
+/**
+ * @brief
+ *
+ */
+#ifndef EXTERNAL_LIB_FUNCTION
+/**
+ * @brief
+ *
+ * @return esp_err_t
+ */
+esp_err_t led_ctrl_init(void)
+{
+    // LED strip general initialization, according to your led board design
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = LED_STRIP_BLINK_GPIO,   // The GPIO that connected to the LED strip's data line
+        .max_leds = LED_STRIP_LED_NUMBERS,        // The number of LEDs in the strip,
+        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
+        .led_model = LED_MODEL_WS2812,            // LED strip model
+        .flags.invert_out = false,                // whether to invert the output signal
+    };
+
+    // LED strip backend configuration: RMT
+    led_strip_rmt_config_t rmt_config = {
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+        .rmt_channel = 0,
+#else
+        .clk_src = RMT_CLK_SRC_DEFAULT,        // different clock source can lead to different power consumption
+        .resolution_hz = LED_STRIP_RMT_RES_HZ, // RMT counter clock frequency
+        .flags.with_dma = false,               // DMA feature is available on ESP target like ESP32-S3
+#endif
+    };
+
+    // LED Strip object handle
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+    ESP_LOGI(TAG, "Created LED strip object with RMT backend");
+
+    return ESP_OK;
+}
+
+/**
+ * @brief
+ *
+ * @param state
+ */
+void led_ctrl_set_state(uint8_t state)
+{
+    state_led_rgb = state;
+}
+
+/**
+ * @brief
+ *
+ * @return uint8_t
+ */
+uint8_t led_ctrl_get_state(void)
+{
+    return state_led_rgb;
+}
+
+/**
+ * @brief
+ *
+ * @param mode
+ */
+void led_ctrl_set_mode(uint8_t mode)
+{
+    mode_led_rgb = mode;
+}
+
+/**
+ * @brief
+ *
+ * @return uint8_t
+ */
+uint8_t led_ctrl_get_mode(void)
+{
+    return mode_led_rgb;
+}
+
+/**
+ * @brief
+ *
+ */
+void led_ctrl_random_color(void)
+{
+    led_ctrl_set_mode(RECEIVED_COMMAND);
+    vTaskDelay(pdMS_TO_TICKS(5));
+    led_ctrl_set_state(get_random_number(OFF, YELLOW));
+}
 #endif
 
 void led_ctrl_app(void *pvParameters)
@@ -312,7 +328,7 @@ void led_ctrl_app(void *pvParameters)
             ESP_LOGE(TAG, "Non-existent operating mode");
             break;
         }
-        vTaskDelay(pdMS_TO_TICKS(10)); // Verificando a cada 10 ms (100Hz)
+        vTaskDelay(pdMS_TO_TICKS(2)); // Verificando a cada 2 ms (500Hz)
     }
 }
 

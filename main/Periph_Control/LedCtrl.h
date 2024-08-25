@@ -25,8 +25,11 @@
 // Framework Libraries (ESP-IDF).
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_timer.h"
+#include "esp_system.h"
 #include "led_strip.h"
 #include "led_strip_interface.h"
+#include "../main.h"
 
 #define LED_STRIP_BLINK_GPIO 48                 // GPIO assignment
 #define LED_STRIP_LED_NUMBERS 1                 // Numbers of the LED in the strip
@@ -56,8 +59,9 @@ typedef enum
 esp_err_t led_ctrl_init(void);
 uint8_t led_ctrl_get_mode(void);
 uint8_t led_ctrl_get_state(void);
+void led_ctrl_random_color(void);
 void led_ctrl_set_mode(uint8_t mode);
-void led_ctrl_set_state(uint8_t state);
 void led_ctrl_app(void *pvParameters); 
+void led_ctrl_set_state(uint8_t state);
 
 #endif

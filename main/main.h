@@ -25,10 +25,10 @@
 #include "freertos/task.h"
 
 // Framework Libraries (ESP-IDF).
+#include "esp_system.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "esp_system.h"
 #include "dht.h"
 
 // Project libraries (climaQ).
@@ -42,5 +42,7 @@ typedef struct
     float temperature;
     float humidity;
 } dht22_data_t;
+
+int get_random_number(int min, int max);
 
 #endif

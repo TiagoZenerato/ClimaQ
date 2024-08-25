@@ -21,7 +21,11 @@ gpio_config_t io_conf = {
     .pull_up_en = GPIO_PULLUP_ENABLE, // Habilitar pull-up interno
     .pull_down_en = GPIO_PULLDOWN_DISABLE};
 
-// Função de tratamento da interrupção
+/**
+ * @brief 
+ * 
+ * @param arg 
+ */
 void IRAM_ATTR button_isr_handler(void *arg)
 {
     // Código para lidar com a interrupção, como alternar LEDs ou incrementar contadores
@@ -38,4 +42,9 @@ void init_button(void)
     // Instala o ISR
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     gpio_isr_handler_add(BUTTON_GPIO, button_isr_handler, NULL);
+}
+
+
+void button_ctrl_app(void *pvParameters){
+
 }

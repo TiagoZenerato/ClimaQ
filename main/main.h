@@ -29,12 +29,18 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_system.h"
+#include "dht.h"
 
 // Project libraries (climaQ).
 #include "Mqtt_Control/WifiCtrl.h"
 #include "Mqtt_Control/MqttCtrl.h"
 #include "Periph_Control/ButtonCtrl.h"
 #include "Periph_Control/LedCtrl.h"
-#include "Sensor_Control/Dht22.h"
+
+typedef struct
+{
+    float temperature;
+    float humidity;
+} dht22_data_t;
 
 #endif

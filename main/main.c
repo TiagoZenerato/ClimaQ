@@ -142,9 +142,10 @@ int get_random_number(int min, int max)
     return min + (esp_random() % (max - min));
 }
 
-void dht_sensor_app(dht22_data_t *data)
+void dht_sensor_app(void)
 {
-    esp_err_t result = dht22_read(data);
+    gpio_num_t pin = GPIO_NUM_5;
+    esp_err_t result = dht_read_float_data(DHT_TYPE_AM2301, pin, &sensor_data.humidity, &sensor_data.temperature);
     if (result == ESP_OK)
     {
         ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
@@ -153,6 +154,7 @@ void dht_sensor_app(dht22_data_t *data)
     {
         ESP_LOGE("DHT22", "Failed to read from DHT22 sensor");
     }
+    vTaskDelay(pdMS_TO_TICKS(300));
 }
 
 void app_main(void)
@@ -173,8 +175,6 @@ void app_main(void)
         led_ctrl_set_mode(ERRO);
     }
 
-    ESP_ERROR_CHECK(dht22_init(DHT22_GPIO));
-
     while (true)
     {
         if (btState)
@@ -185,7 +185,7 @@ void app_main(void)
             btState = false;
         }
 
-        dht_sensor_app(&sensor_data);
+        dht_sensor_app();
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }

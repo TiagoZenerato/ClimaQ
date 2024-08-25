@@ -11,6 +11,7 @@
 
 #include "main.h"
 
+// 
 static const char *TAG = "MAIN";
 static const char *TAG_REPORT = "[SYS-INFO]";
 
@@ -19,7 +20,7 @@ const char *ssid = "ZENA2007";
 const char *password = "m130856z";
 
 // Detalhes do broker MQTT
-const char *mqtt_server = "broker.hivemq.com";
+const char *mqtt_server = "broker.hivemq.com"; //
 const int mqtt_port = 8884;                         // Porta fornecida
 const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
 
@@ -34,6 +35,21 @@ void status_report_app(void *pvParameters)
         ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) ---> |ClimaQ| ----> |VER: %i| -----> |P2G-\u2665| ", cont_report_send++, VERSION_CTRL_FW);
         vTaskDelay(pdMS_TO_TICKS(3000)); // A cada 3s
     }
+}
+
+void dht_sensor_app(void)
+{
+    gpio_num_t pin = GPIO_NUM_5;
+    esp_err_t result = dht_read_float_data(DHT_TYPE_AM2301, pin, &sensor_data.humidity, &sensor_data.temperature);
+    if (result == ESP_OK)
+    {
+        ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+    }
+    else
+    {
+        ESP_LOGE("DHT22", "Failed to read from DHT22 sensor");
+    }
+    vTaskDelay(pdMS_TO_TICKS(300));
 }
 
 /**
@@ -140,21 +156,6 @@ int get_random_number(int min, int max)
 {
     // Return a random number in the range [min, max)
     return min + (esp_random() % (max - min));
-}
-
-void dht_sensor_app(void)
-{
-    gpio_num_t pin = GPIO_NUM_5;
-    esp_err_t result = dht_read_float_data(DHT_TYPE_AM2301, pin, &sensor_data.humidity, &sensor_data.temperature);
-    if (result == ESP_OK)
-    {
-        ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
-    }
-    else
-    {
-        ESP_LOGE("DHT22", "Failed to read from DHT22 sensor");
-    }
-    vTaskDelay(pdMS_TO_TICKS(300));
 }
 
 void app_main(void)

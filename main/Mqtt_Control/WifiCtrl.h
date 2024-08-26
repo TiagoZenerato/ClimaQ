@@ -39,10 +39,14 @@
 #define WIFI_CONNECTED_BIT BIT0 // Definição do estado de conectado
 #define WIFI_FAIL_BIT BIT1      // Definição do estado de desconectado
 
+// Conectar-se a uma rede Wi-Fi
+extern const char *ssid;
+extern const char *password;
+
 // Funções para uso externo
-esp_err_t wifi_manager_init(void);
-bool wifi_manager_is_connected(void);
-esp_err_t wifi_manager_disconnect(void);
-esp_err_t wifi_manager_connect(const char *ssid, const char *password);
+extern esp_err_t wifi_manager_init(void);
+extern bool wifi_manager_is_connected(void);
+extern esp_err_t wifi_manager_disconnect(void);
+extern esp_err_t wifi_manager_connect(const char *ssid, const char *password);
 
 #endif // WIFI_MANAGER_H

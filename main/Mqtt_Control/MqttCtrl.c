@@ -18,6 +18,10 @@
 static esp_mqtt_client_handle_t client = NULL;
 static const char *TAG = "MQTT_LIB";
 
+const int mqtt_port = 8884;                         // Porta fornecida
+const char *mqtt_server = "broker.hivemq.com";      // url do broker
+const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
+
 /**
  * @brief Callback para eventos MQTT.
  *

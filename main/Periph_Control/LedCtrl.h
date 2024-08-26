@@ -35,6 +35,9 @@
 #define LED_STRIP_LED_NUMBERS 1                 // Numbers of the LED in the strip
 #define LED_STRIP_RMT_RES_HZ (10 * 1000 * 1000) // 10MHz resolution, 1 tick = 0.1us (led strip needs a high resolution)
 
+#define BLINK_TIME_1 1000
+#define BLINK_TIME_2 300
+
 // Estados possíveis para o led
 typedef enum
 {
@@ -52,7 +55,8 @@ typedef enum
     CONNECTED,
     ERRO,
     NEW_DATA_SEND,
-    RECEIVED_COMMAND
+    RECEIVED_COMMAND,
+    BLINK_NOW_STATE
 } LED_RGB_MODE;
 
 // funções de uso externo
@@ -63,5 +67,6 @@ void led_ctrl_random_color(void);
 void led_ctrl_set_mode(uint8_t mode);
 void led_ctrl_app(void *pvParameters); 
 void led_ctrl_set_state(uint8_t state);
+void led_ctrl_toggle_blink_time(void);
 
 #endif

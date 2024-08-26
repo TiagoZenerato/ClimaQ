@@ -11,51 +11,51 @@
 
 #include "main.h"
 
-//
+// String utilizada para identificar as mensagens de log.
 static const char *TAG = "MAIN";
 static const char *TAG_REPORT = "[SYS-INFO]";
 
-// Conectar-se a uma rede Wi-Fi
-const char *ssid = "ZENA2007";
-const char *password = "m130856z";
-
-// Detalhes do broker MQTT
-const char *mqtt_server = "broker.hivemq.com";      // url do broker
-const int mqtt_port = 8884;                         // Porta fornecida
-const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
-
 dht22_data_t sensor_data;
 
-int get_random_number(int min, int max)
-{
-    // Return a random number in the range [min, max)
-    return min + (esp_random() % (max - min));
-}
-
+#ifndef INTERNAL_FUNCTIONS
+/**
+ * @brief
+ *
+ * @param pvParameters
+ */
 void status_report_app(void *pvParameters)
 {
     uint8_t cont_report_send = 0;
     while (true)
     {
         printf("\e[1;1H\e[2J"); // limpar todo o terminal
-        ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) ---> |ClimaQ| ----> |VER: %i| -----> |P2G-\u2665| ", cont_report_send++, VERSION_CTRL_FW);
+        cont_report_send = (cont_report_send >= 253) ? 0 : cont_report_send + 1;
+        ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) ---> |ClimaQ| ----> |VER: %i| -----> |P2G-\u2665| ", cont_report_send, VERSION_CTRL_FW);
         vTaskDelay(pdMS_TO_TICKS(3000)); // A cada 3s
     }
 }
 
+/**
+ * @brief
+ *
+ */
 void dht_sensor_app(void)
 {
     gpio_num_t pin = GPIO_NUM_5;
-    esp_err_t result = dht_read_float_data(DHT_TYPE_AM2301, pin, &sensor_data.humidity, &sensor_data.temperature);
-    if (result == ESP_OK)
+
+    while (true)
     {
-        ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+        esp_err_t result = dht_read_float_data(DHT_TYPE_AM2301, pin, &sensor_data.humidity, &sensor_data.temperature);
+        if (result == ESP_OK)
+        {
+            ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+        }
+        else
+        {
+            ESP_LOGE("DHT22", "Failed to read from DHT22 sensor");
+        }
+        vTaskDelay(pdMS_TO_TICKS(300));
     }
-    else
-    {
-        ESP_LOGE("DHT22", "Failed to read from DHT22 sensor");
-    }
-    vTaskDelay(pdMS_TO_TICKS(300));
 }
 
 /**
@@ -63,11 +63,10 @@ void dht_sensor_app(void)
  *
  */
 void setAllTasksCore_0(void)
-{ 
-    // relatorio e o botao
-
-    // xTaskCreatePinnedToCore(led_ctrl_app, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
-    xTaskCreatePinnedToCore(status_report_app, "TaskStatusReport", 2048, NULL, 1, NULL, 0); //
+{
+    // Atividades do core 0
+    xTaskCreatePinnedToCore(button_ctrl_app, "Task-Button-App", 4096, NULL, 1, NULL, 0);          // serviço de controle para o interrupção do botão
+    xTaskCreatePinnedToCore(status_report_app, "Task-Status-Report-App", 4096, NULL, 2, NULL, 0); // serviço de relatório do status da aplicação
 }
 
 /**
@@ -76,9 +75,9 @@ void setAllTasksCore_0(void)
  */
 void setAllTasksCore_1(void)
 {
-    
-    xTaskCreatePinnedToCore(led_ctrl_app, "TaskLedRGB", 4096, NULL, 1, NULL, 0); // Led RGB (NeoPixel) service
-    // xTaskCreatePinnedToCore(serviceRGB, "TaskLedRGB", 2048, NULL, 1, NULL, 1); // Led RGB (NeoPixel) service
+    // Atividades do core 1
+    xTaskCreatePinnedToCore(led_ctrl_app, "Task-Led-RGB-App", 4096, NULL, 1, NULL, 1); // Led RGB (NeoPixel) service
+    xTaskCreatePinnedToCore(dht_sensor_app, "Task-Dht22-App", 4096, NULL, 2, NULL, 1); // Led RGB (NeoPixel) service
 }
 
 /**
@@ -161,14 +160,32 @@ esp_err_t mqtt_start_all(void)
     return ESP_OK;
 }
 
+#endif
+
+#ifndef EXTERNAL_FUNCTIONS
+/**
+ * @brief Get the random number object
+ *
+ * @param min
+ * @param max
+ * @return int
+ */
+int get_random_number(int min, int max)
+{
+    // Return a random number in the range [min, max)
+    return min + (esp_random() % (max - min));
+}
+
+#endif
+
 void app_main(void)
 {
-    init_button();
-
     if (led_ctrl_init() != ESP_OK)
     {
         ESP_LOGE(TAG, "A configuracao do led RGB falhou..");
     }
+
+    init_button();
 
     setAllTasksCore_0();
     setAllTasksCore_1();
@@ -179,16 +196,4 @@ void app_main(void)
         led_ctrl_set_mode(ERRO);
     }
 
-    while (true)
-    {
-        if (btState)
-        {
-            led_ctrl_random_color(); 
-            btState = false;
-        }
-
-        dht_sensor_app();
-
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
 }

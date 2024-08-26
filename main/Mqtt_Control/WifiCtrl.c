@@ -18,6 +18,10 @@
 static int s_retry_num = 0;              // Contador de tentativas de reconexão.
 static const char *TAG = "WIFI_MANAGER"; // String utilizada para identificar as mensagens de log geradas pelo gerenciador de Wi-Fi.
 
+// Conectar-se a uma rede Wi-Fi
+const char *ssid = "ZENA2007";
+const char *password = "m130856z";
+
 // Declaração de struct para uso da lib
 static EventGroupHandle_t s_wifi_event_group;
 static esp_event_handler_instance_t instance_any_id;

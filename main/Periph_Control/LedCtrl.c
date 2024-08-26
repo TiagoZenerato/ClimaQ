@@ -13,9 +13,16 @@
 
 static const char *TAG = "LedCtrl";
 
+// Variáveis de controle para o modo de blink.
+int current_index = 0;
+static uint32_t time_for_blink_mode = 0;
+uint32_t blink_time_use[] = {BLINK_TIME_1, BLINK_TIME_2};
+int num_values = sizeof(blink_time_use) / sizeof(blink_time_use[0]);
+
 // Variáveis de controle para operação do led.
-static uint8_t state_led_rgb = 0;
+static int last_random_color;
 static uint8_t mode_led_rgb = 0;
+static uint8_t state_led_rgb = 0;
 
 led_strip_handle_t led_strip; // estrutura de controle
 
@@ -186,6 +193,57 @@ void led_ctrl_new_data_send_mode(void)
     led_ctrl_off_state();
 }
 
+void led_ctrl_blink_mode(void)
+{
+    static TickType_t lastWakeTime = 0;
+    static int state = 0; // Estado da máquina de estados
+
+    switch (state)
+    {
+    case 0:
+        switch (state_led_rgb)
+        {
+        case OFF:
+            led_ctrl_off_state();
+            break;
+        case RED:
+            led_ctrl_red_state();
+            break;
+        case GREEN:
+            led_ctrl_green_state();
+            break;
+        case BLUE:
+            led_ctrl_blue_state();
+            break;
+        case YELLOW:
+            led_ctrl_yellow_state();
+            break;
+        default:
+            led_ctrl_off_state();
+            led_ctrl_set_mode(ERRO);
+            ESP_LOGE(TAG, "Status requested incorrect or to be implemented");
+            break;
+        }
+        lastWakeTime = xTaskGetTickCount();
+        state = 1;
+        break;
+    case 1:
+        if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(time_for_blink_mode))
+        {
+            led_ctrl_off_state();
+            lastWakeTime = xTaskGetTickCount();
+            state = 2;
+        }
+        break;
+    case 2:
+        // Espera 250 ms com o LED desligado
+        if ((xTaskGetTickCount() - lastWakeTime) >= pdMS_TO_TICKS(time_for_blink_mode))
+        {
+            state = 0;
+        }
+        break;
+    }
+}
 #endif
 
 /**
@@ -275,8 +333,30 @@ void led_ctrl_random_color(void)
 {
     led_ctrl_set_mode(RECEIVED_COMMAND);
     vTaskDelay(pdMS_TO_TICKS(5));
-    led_ctrl_set_state(get_random_number(OFF, YELLOW));
+    int color_for_led = get_random_number(RED, YELLOW);
+
+    if (color_for_led != last_random_color)
+    {
+        led_ctrl_set_state(color_for_led);
+        last_random_color = color_for_led;
+    }
+    else
+    {
+        led_ctrl_set_state(get_random_number(RED, YELLOW));
+    }
 }
+
+/**
+ * @brief 
+ * 
+ */
+void led_ctrl_toggle_blink_time(void)
+{
+    mode_led_rgb = BLINK_NOW_STATE;
+    current_index = (current_index + 1) % num_values;
+    time_for_blink_mode = blink_time_use[current_index];
+}
+
 #endif
 
 void led_ctrl_app(void *pvParameters)
@@ -322,6 +402,9 @@ void led_ctrl_app(void *pvParameters)
                 ESP_LOGE(TAG, "Status requested incorrect or to be implemented");
                 break;
             }
+            break;
+        case BLINK_NOW_STATE:
+            led_ctrl_blink_mode();
             break;
         default:
             mode_led_rgb = ERRO;

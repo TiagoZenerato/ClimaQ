@@ -36,6 +36,11 @@
 #include "mqtt_client.h"
 #include "cJSON.h"
 
+// Detalhes do broker MQTT
+extern const int mqtt_port;                        
+extern const char *mqtt_server;     
+extern const char *mqtt_client_id; 
+
 // Funções para uso externo
 void mqtt_deinit(void);
 esp_err_t mqtt_subscribe(const char *topic);

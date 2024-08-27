@@ -18,9 +18,8 @@
 static esp_mqtt_client_handle_t client = NULL;
 static const char *TAG = "MQTT_LIB";
 
-const int mqtt_port = 8884;                         // Porta fornecida
-const char *mqtt_server = "broker.hivemq.com";      // url do broker
-const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
+const int mqtt_port = 1883;                    // Porta fornecida
+const char *mqtt_server = "broker.hivemq.com"; // url do broker
 
 /**
  * @brief Callback para eventos MQTT.
@@ -30,29 +29,16 @@ const char *mqtt_client_id = "clientId-TXAQggAfwO"; // ClientID fornecido
  */
 static void mqtt_event_handler(esp_mqtt_event_handle_t event)
 {
-    switch (event->event_id)
+    if (event == NULL)
     {
-    case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        break;
-    case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-        break;
-    case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, topic=%s, msg_id=%d", event->topic, event->msg_id);
-        break;
-    case MQTT_EVENT_UNSUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, topic=%s, msg_id=%d", event->topic, event->msg_id);
-        break;
-    case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_DATA:
-        ESP_LOGI(TAG, "MQTT_EVENT_DATA, topic=%s, len=%d", event->topic, event->data_len);
-        break;
-    default:
-        ESP_LOGI(TAG, "Other MQTT event id:%d", event->event_id);
-        break;
+        ESP_LOGE(TAG, "Null event received");
+        return;
+    }
+
+    if (event->event_id == MQTT_EVENT_DATA) {
+        ESP_LOGI("DATA", "Topic: %.*s", event->topic_len, event->topic);
+        ESP_LOGI("DATA", "Data: %.*s", event->data_len, event->data);
+        // Processamento adicional aqui
     }
 }
 
@@ -67,7 +53,7 @@ static void mqtt_event_handler(esp_mqtt_event_handle_t event)
 esp_err_t mqtt_init(const char *uri, uint16_t port_use_connect)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = uri,
+        .broker.address.hostname = uri,
         .broker.address.port = port_use_connect,
         .broker.address.transport = MQTT_TRANSPORT_OVER_TCP,
     };
@@ -79,7 +65,12 @@ esp_err_t mqtt_init(const char *uri, uint16_t port_use_connect)
         return ESP_FAIL;
     }
 
-    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+     esp_err_t err2 = esp_mqtt_client_register_event(client, MQTT_EVENT_DATA, mqtt_event_handler, NULL);
+    if (err2 != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to register event handler, err=%d", err2);
+        return err2;
+    }
 
     esp_err_t err = esp_mqtt_client_start(client);
     if (err != ESP_OK)
@@ -107,7 +98,7 @@ esp_err_t mqtt_publish(const char *topic, const char *payload, int len)
         return ESP_ERR_INVALID_STATE;
     }
 
-    int msg_id = esp_mqtt_client_publish(client, topic, payload, len, 1, 0);
+    int msg_id = esp_mqtt_client_publish(client, topic, payload, len, 2, 0);
     if (msg_id == -1)
     {
         ESP_LOGE(TAG, "Failed to publish message");
@@ -131,7 +122,7 @@ esp_err_t mqtt_subscribe(const char *topic)
         return ESP_ERR_INVALID_STATE;
     }
 
-    int msg_id = esp_mqtt_client_subscribe(client,(char *) topic, 0);
+    int msg_id = esp_mqtt_client_subscribe(client, (char *)topic, 0);
     if (msg_id == -1)
     {
         ESP_LOGE(TAG, "Failed to subscribe to topic");

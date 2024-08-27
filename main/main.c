@@ -31,6 +31,7 @@ void status_report_app(void *pvParameters)
         printf("\e[1;1H\e[2J"); // limpar todo o terminal
         cont_report_send = (cont_report_send >= 253) ? 0 : cont_report_send + 1;
         ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) ---> |ClimaQ| ----> |VER: %i| -----> |P2G-\u2665| ", cont_report_send, VERSION_CTRL_FW);
+        ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
         vTaskDelay(pdMS_TO_TICKS(3000)); // A cada 3s
     }
 }
@@ -48,7 +49,7 @@ void dht_sensor_app(void)
         esp_err_t result = dht_read_float_data(DHT_TYPE_AM2301, pin, &sensor_data.humidity, &sensor_data.temperature);
         if (result == ESP_OK)
         {
-            ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+           // ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
         }
         else
         {
@@ -140,22 +141,22 @@ esp_err_t mqtt_start_all(void)
         return ESP_FAIL;
     }
 
-    // Inscreva-se em um tópico
-    if (mqtt_subscribe("test/topic") != ESP_OK)
+    // // Inscreva-se em um tópico
+    if (mqtt_subscribe("climaQ/TrocarCor") != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to subscribe to topic");
         return ESP_FAIL;
     }
 
     // Publique uma mensagem
-    if (mqtt_publish("test/topic", "Hello, world!", strlen("Hello, world!")) != ESP_OK)
+    if (mqtt_publish("climaQ/report", "Hello, world!", strlen("Hello, world!")) != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to publish message");
         return ESP_FAIL;
     }
 
     // Lembre-se de desalocar recursos ao final
-    mqtt_deinit();
+    //mqtt_deinit();
 
     return ESP_OK;
 }

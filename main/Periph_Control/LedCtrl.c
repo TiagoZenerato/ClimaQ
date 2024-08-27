@@ -20,9 +20,10 @@ uint32_t blink_time_use[] = {BLINK_TIME_1, BLINK_TIME_2};
 int num_values = sizeof(blink_time_use) / sizeof(blink_time_use[0]);
 
 // Variáveis de controle para operação do led.
-static int last_random_color;
 static uint8_t mode_led_rgb = 0;
 static uint8_t state_led_rgb = 0;
+static uint8_t last_mode_led_rgb = 0;
+static uint8_t last_state_led_rgb = 0;
 
 led_strip_handle_t led_strip; // estrutura de controle
 
@@ -125,8 +126,9 @@ void led_ctrl_waiting_connect_mode(void)
 void led_ctrl_connected_mode(void)
 {
     led_ctrl_green_state();
-    vTaskDelay(pdMS_TO_TICKS(320));
+    vTaskDelay(pdMS_TO_TICKS(120));
     led_ctrl_off_state();
+    vTaskDelay(pdMS_TO_TICKS(120));
 }
 
 /**
@@ -292,6 +294,7 @@ esp_err_t led_ctrl_init(void)
  */
 void led_ctrl_set_state(uint8_t state)
 {
+    last_state_led_rgb = state_led_rgb;
     state_led_rgb = state;
 }
 
@@ -311,7 +314,8 @@ uint8_t led_ctrl_get_state(void)
  * @param mode
  */
 void led_ctrl_set_mode(uint8_t mode)
-{
+{ 
+    last_mode_led_rgb = mode_led_rgb;
     mode_led_rgb = mode;
 }
 
@@ -329,26 +333,25 @@ uint8_t led_ctrl_get_mode(void)
  * @brief
  *
  */
-void led_ctrl_random_color(void)
+void led_ctrl_toggle_color(void)
 {
     led_ctrl_set_mode(RECEIVED_COMMAND);
     vTaskDelay(pdMS_TO_TICKS(5));
-    int color_for_led = get_random_number(RED, YELLOW);
 
-    if (color_for_led != last_random_color)
+    if (state_led_rgb <= YELLOW)
     {
-        led_ctrl_set_state(color_for_led);
-        last_random_color = color_for_led;
+        led_ctrl_set_state(state_led_rgb);
+        state_led_rgb++;
     }
     else
     {
-        led_ctrl_set_state(get_random_number(RED, YELLOW));
+        state_led_rgb = 1;
     }
 }
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  */
 void led_ctrl_toggle_blink_time(void)
 {
@@ -357,10 +360,20 @@ void led_ctrl_toggle_blink_time(void)
     time_for_blink_mode = blink_time_use[current_index];
 }
 
+uint32_t led_ctrl_get_time_use_blink(void){
+    return time_for_blink_mode;
+}
 #endif
 
+/**
+ * @brief
+ *
+ * @param pvParameters
+ */
 void led_ctrl_app(void *pvParameters)
 {
+    bool clean_mode_request = false;
+
     ESP_LOGI(TAG, "Started main LED RGB control application");
     while (true)
     {
@@ -368,15 +381,18 @@ void led_ctrl_app(void *pvParameters)
         {
         case WAITING_CONNECT:
             led_ctrl_waiting_connect_mode();
+            clean_mode_request = true;
             break;
         case CONNECTED:
             led_ctrl_connected_mode();
+            clean_mode_request = true;
             break;
         case ERRO:
             led_ctrl_erro_mode();
             break;
         case NEW_DATA_SEND:
             led_ctrl_new_data_send_mode();
+            clean_mode_request = true;
             break;
         case RECEIVED_COMMAND:
             switch (state_led_rgb)
@@ -406,11 +422,21 @@ void led_ctrl_app(void *pvParameters)
         case BLINK_NOW_STATE:
             led_ctrl_blink_mode();
             break;
+        case CLEAR_MODE:
+            vTaskDelay(pdMS_TO_TICKS(10));
+            break;
         default:
             mode_led_rgb = ERRO;
             ESP_LOGE(TAG, "Non-existent operating mode");
             break;
         }
+
+        if (clean_mode_request == true)
+        {
+            led_ctrl_set_mode(CLEAR_MODE);
+            clean_mode_request = false;
+        }
+
         vTaskDelay(pdMS_TO_TICKS(2)); // Verificando a cada 2 ms (500Hz)
     }
 }

@@ -12,7 +12,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#define VERSION_CTRL_FW 112
+#define VERSION_CTRL_FW 115
 
 // language libraries (C).
 #include <stdio.h>
@@ -42,7 +42,5 @@ typedef struct
     float temperature;
     float humidity;
 } dht22_data_t;
-
-int get_random_number(int min, int max);
 
 #endif

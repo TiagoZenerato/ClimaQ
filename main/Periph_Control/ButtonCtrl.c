@@ -121,7 +121,7 @@ void button_ctrl_app(void *pvParameters)
         }
         else if (press_mode == BUTTON_PRESS_LONG)
         {
-            led_ctrl_random_color();
+            led_ctrl_toggle_color();
             press_mode = BUTTON_PRESS_NONE;
         }
         vTaskDelay(pdMS_TO_TICKS(10)); // A cada 10ms

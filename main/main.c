@@ -26,12 +26,73 @@ dht22_data_t sensor_data;
 void status_report_app(void *pvParameters)
 {
     uint8_t cont_report_send = 0;
+    const char *Led_Color = "";
+    const char *Led_State = "";
+    uint32_t timer_for_blink = 0;
+
     while (true)
     {
         printf("\e[1;1H\e[2J"); // limpar todo o terminal
         cont_report_send = (cont_report_send >= 253) ? 0 : cont_report_send + 1;
-        ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) ---> |ClimaQ| ----> |VER: %i| -----> |P2G-\u2665| ", cont_report_send, VERSION_CTRL_FW);
-        ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+        ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) --> |ClimaQ| --> |VER: %i| --> |P2G-\u2665|", cont_report_send, VERSION_CTRL_FW);
+        ESP_LOGI(TAG_REPORT, "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+
+        switch (led_ctrl_get_mode())
+        {
+        case WAITING_CONNECT:
+            Led_State = "WAITING_CONNECT";
+            break;
+        case CONNECTED:
+            Led_State = "CONNECTED";
+            break;
+        case ERRO:
+            Led_State = "ERRO";
+            break;
+        case NEW_DATA_SEND:
+            Led_State = "NEW_DATA_SEND";
+            break;
+        case RECEIVED_COMMAND:
+            Led_State = "RECEIVED_COMMAND";
+            break;
+        case BLINK_NOW_STATE:
+            Led_State = "BLINK_NOW_STATE";
+            timer_for_blink = led_ctrl_get_time_use_blink();
+            break;
+        case CLEAR_MODE:
+            Led_State = "CLEAR_MODE";
+            break;
+        default:
+            break;
+        }
+
+        switch (led_ctrl_get_state())
+        {
+        case OFF:
+            Led_Color = "OFF";
+            break;
+        case RED:
+            Led_Color = "RED";
+            break;
+        case GREEN:
+            Led_Color = "GREEN";
+            break;
+        case BLUE:
+            Led_Color = "BLUE";
+            break;
+        case YELLOW:
+            Led_Color = "YELLOW";
+            break;
+        default:
+            break;
+        }
+
+        if (led_ctrl_get_mode() == BLINK_NOW_STATE)
+        {
+            ESP_LOGI(TAG_REPORT, "Led color: %s, Led state: %s, Interval: %li", Led_Color, Led_State, timer_for_blink);
+        }else{
+            ESP_LOGI(TAG_REPORT, "Led color: %s, Led state: %s", Led_Color, Led_State);
+        }
+
         vTaskDelay(pdMS_TO_TICKS(3000)); // A cada 3s
     }
 }
@@ -40,7 +101,7 @@ void status_report_app(void *pvParameters)
  * @brief
  *
  */
-void dht_sensor_app(void)
+void dht_sensor_app(void *pvParameters)
 {
     gpio_num_t pin = GPIO_NUM_5;
 
@@ -49,7 +110,7 @@ void dht_sensor_app(void)
         esp_err_t result = dht_read_float_data(DHT_TYPE_AM2301, pin, &sensor_data.humidity, &sensor_data.temperature);
         if (result == ESP_OK)
         {
-           // ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
+            // ESP_LOGI("DHT22", "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
         }
         else
         {
@@ -156,31 +217,16 @@ esp_err_t mqtt_start_all(void)
     }
 
     // Lembre-se de desalocar recursos ao final
-    //mqtt_deinit();
+    // mqtt_deinit();
 
     return ESP_OK;
 }
 
 #endif
 
-#ifndef EXTERNAL_FUNCTIONS
-/**
- * @brief Get the random number object
- *
- * @param min
- * @param max
- * @return int
- */
-int get_random_number(int min, int max)
-{
-    // Return a random number in the range [min, max)
-    return min + (esp_random() % (max - min));
-}
-
-#endif
-
 void app_main(void)
 {
+
     if (led_ctrl_init() != ESP_OK)
     {
         ESP_LOGE(TAG, "A configuracao do led RGB falhou..");
@@ -196,5 +242,8 @@ void app_main(void)
         ESP_LOGE(TAG, "A inicializacao do serviço de mqtt/wifi falhou...");
         led_ctrl_set_mode(ERRO);
     }
-
+    else
+    {
+        led_ctrl_set_mode(CONNECTED);
+    }
 }

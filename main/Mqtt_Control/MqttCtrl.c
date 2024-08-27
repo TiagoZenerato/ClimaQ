@@ -27,18 +27,31 @@ const char *mqtt_server = "broker.hivemq.com"; // url do broker
  * @param client Cliente MQTT.
  * @param event Evento MQTT.
  */
-static void mqtt_event_handler(esp_mqtt_event_handle_t event)
+// Example event handler function
+void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
+    esp_mqtt_event_handle_t event = event_data;
+
     if (event == NULL)
     {
         ESP_LOGE(TAG, "Null event received");
         return;
     }
 
-    if (event->event_id == MQTT_EVENT_DATA) {
-        ESP_LOGI("DATA", "Topic: %.*s", event->topic_len, event->topic);
-        ESP_LOGI("DATA", "Data: %.*s", event->data_len, event->data);
-        // Processamento adicional aqui
+    switch (event_id)
+    {
+    case MQTT_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        break;
+    case MQTT_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        break;
+    case MQTT_EVENT_DATA:
+        ESP_LOGI(TAG, "MQTT_EVENT_DATA received");
+        break;
+    default:
+        ESP_LOGI(TAG, "Other event id: %li", event_id);
+        break;
     }
 }
 
@@ -56,6 +69,8 @@ esp_err_t mqtt_init(const char *uri, uint16_t port_use_connect)
         .broker.address.hostname = uri,
         .broker.address.port = port_use_connect,
         .broker.address.transport = MQTT_TRANSPORT_OVER_TCP,
+        .session.keepalive = 60,
+        .network.disable_auto_reconnect = true,
     };
 
     client = esp_mqtt_client_init(&mqtt_cfg);
@@ -65,7 +80,7 @@ esp_err_t mqtt_init(const char *uri, uint16_t port_use_connect)
         return ESP_FAIL;
     }
 
-     esp_err_t err2 = esp_mqtt_client_register_event(client, MQTT_EVENT_DATA, mqtt_event_handler, NULL);
+    esp_err_t err2 = esp_mqtt_client_register_event(client, MQTT_EVENT_DATA, mqtt_event_handler, NULL);
     if (err2 != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to register event handler, err=%d", err2);

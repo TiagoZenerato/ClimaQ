@@ -36,6 +36,9 @@
 #include "mqtt_client.h"
 #include "cJSON.h"
 
+// Project libraries (climaQ).
+#include "../Periph_Control/LedCtrl.h"
+
 // Detalhes do broker MQTT
 extern const int mqtt_port;                        
 extern const char *mqtt_server;     

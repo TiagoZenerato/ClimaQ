@@ -25,16 +25,16 @@ dht22_data_t sensor_data;
  */
 void status_report_app(void *pvParameters)
 {
-    uint8_t cont_report_send = 0;
     const char *Led_Color = "";
     const char *Led_State = "";
     uint32_t timer_for_blink = 0;
+    uint32_t cont_report_send = 0;
 
     while (true)
     {
         printf("\e[1;1H\e[2J"); // limpar todo o terminal
-        cont_report_send = (cont_report_send >= 253) ? 0 : cont_report_send + 1;
-        ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %i) --> |ClimaQ| --> |VER: %i| --> |P2G-\u2665|", cont_report_send, VERSION_CTRL_FW);
+        cont_report_send = (cont_report_send >= 0x7FFFFFFE) ? 0 : cont_report_send + 1;
+        ESP_LOGI(TAG_REPORT, "(REPORT_NUM: %li)--> |ClimaQ|--> |VER: %i|--> |P2G-\u2665|", cont_report_send, VERSION_CTRL_FW);
         ESP_LOGI(TAG_REPORT, "Temperature: %.1f C, Humidity: %.1f %%", sensor_data.temperature, sensor_data.humidity);
 
         switch (led_ctrl_get_mode())
@@ -92,6 +92,26 @@ void status_report_app(void *pvParameters)
         }else{
             ESP_LOGI(TAG_REPORT, "Led color: %s, Led state: %s", Led_Color, Led_State);
         }
+        
+        // Criando o objeto JSON
+        cJSON *report_json = cJSON_CreateObject();
+        cJSON_AddNumberToObject(report_json, "report_number", cont_report_send);
+        cJSON_AddNumberToObject(report_json, "version", VERSION_CTRL_FW);
+        cJSON_AddNumberToObject(report_json, "temperature", sensor_data.temperature);
+        cJSON_AddNumberToObject(report_json, "humidity", sensor_data.humidity);
+        cJSON_AddStringToObject(report_json, "led_color", Led_Color);
+        cJSON_AddStringToObject(report_json, "led_state", Led_State);
+        
+        // Convertendo o JSON para string
+        char *json_string = cJSON_Print(report_json);
+
+        if (mqtt_publish("climaQ/report", json_string, strlen(json_string)) != ESP_OK)
+        {
+            ESP_LOGE(TAG_REPORT, "Failed to publish the JSON report.");
+        }
+
+        cJSON_Delete(report_json);
+        free(json_string);
 
         vTaskDelay(pdMS_TO_TICKS(3000)); // A cada 3s
     }
@@ -188,6 +208,11 @@ esp_err_t wifi_start_all(void)
  */
 esp_err_t mqtt_start_all(void)
 {
+    char initial_message[128];
+    uint8_t initial_message_size = 0;
+
+    initial_message_size = sprintf(initial_message, "|ClimaQ| --> |VER: %i| --> |P2G-\u2665|", VERSION_CTRL_FW);
+
     // iniciando o wifi.
     if (wifi_start_all())
     {
@@ -210,20 +235,20 @@ esp_err_t mqtt_start_all(void)
     }
 
     // Publique uma mensagem
-    if (mqtt_publish("climaQ/report", "Hello, world!", strlen("Hello, world!")) != ESP_OK)
+    if (mqtt_publish("climaQ/report", initial_message, initial_message_size) != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to publish message");
         return ESP_FAIL;
     }
 
-    // Lembre-se de desalocar recursos ao final
-    // mqtt_deinit();
-
     return ESP_OK;
 }
-
 #endif
 
+/**
+ * @brief função principal da aplicação.
+ * 
+ */
 void app_main(void)
 {
 

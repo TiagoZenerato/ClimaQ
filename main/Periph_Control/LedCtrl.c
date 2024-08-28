@@ -13,19 +13,16 @@
 
 static const char *TAG = "LedCtrl";
 
-// Variáveis de controle para o modo de blink.
-int current_index = 0;
-static uint32_t time_for_blink_mode = 0;
-uint32_t blink_time_use[] = {BLINK_TIME_1, BLINK_TIME_2};
-int num_values = sizeof(blink_time_use) / sizeof(blink_time_use[0]);
+static uint8_t mode_led_rgb = 0;                                     // Variável de controle do modo de operação do led.
+static uint8_t blink_timer_select = 0;                               // Variável de controle para selecionar os tempos de blink disponíveis.
+static uint8_t state_led_rgb = 0;                                    // Variável de controle para o estado de operação do led.
+static uint8_t last_mode_led_rgb = 0;                                // Variável para armazenar o último modo de operação do led
+static uint8_t last_state_led_rgb = 0;                               // Variável para armazenar o último estado de operação do led
+static uint32_t time_for_blink_mode = 0;                             // Variável para armazenar o time selecionado para usar no blink
+static uint32_t blink_time_use[] = {BLINK_TIME_1, BLINK_TIME_2};     // Vetor de tempos disponíveis para utilizar
+int num_values = sizeof(blink_time_use) / sizeof(blink_time_use[0]); // Variável para calcular a partir do vetor a quantidade de possíveis tempos.
 
-// Variáveis de controle para operação do led.
-static uint8_t mode_led_rgb = 0;
-static uint8_t state_led_rgb = 0;
-static uint8_t last_mode_led_rgb = 0;
-static uint8_t last_state_led_rgb = 0;
-
-led_strip_handle_t led_strip; // estrutura de controle
+led_strip_handle_t led_strip; // Estrutura de controle para usar o led da placa.
 
 /**
  * @brief
@@ -125,10 +122,13 @@ void led_ctrl_waiting_connect_mode(void)
  */
 void led_ctrl_connected_mode(void)
 {
-    led_ctrl_green_state();
-    vTaskDelay(pdMS_TO_TICKS(120));
-    led_ctrl_off_state();
-    vTaskDelay(pdMS_TO_TICKS(120));
+    for (int x = 0; x < 4; x++)
+    {
+        led_ctrl_green_state();
+        vTaskDelay(pdMS_TO_TICKS(120));
+        led_ctrl_off_state();
+        vTaskDelay(pdMS_TO_TICKS(120));
+    }
 }
 
 /**
@@ -195,6 +195,10 @@ void led_ctrl_new_data_send_mode(void)
     led_ctrl_off_state();
 }
 
+/**
+ * @brief
+ *
+ */
 void led_ctrl_blink_mode(void)
 {
     static TickType_t lastWakeTime = 0;
@@ -314,7 +318,7 @@ uint8_t led_ctrl_get_state(void)
  * @param mode
  */
 void led_ctrl_set_mode(uint8_t mode)
-{ 
+{
     last_mode_led_rgb = mode_led_rgb;
     mode_led_rgb = mode;
 }
@@ -336,16 +340,23 @@ uint8_t led_ctrl_get_mode(void)
 void led_ctrl_toggle_color(void)
 {
     led_ctrl_set_mode(RECEIVED_COMMAND);
-    vTaskDelay(pdMS_TO_TICKS(5));
 
     if (state_led_rgb <= YELLOW)
     {
         led_ctrl_set_state(state_led_rgb);
-        state_led_rgb++;
+        if (state_led_rgb == YELLOW)
+        {
+            state_led_rgb = 1;
+        }
+        else
+        {
+            state_led_rgb++;
+        }
     }
-    else
+
+    if (last_mode_led_rgb == BLINK_NOW_STATE)
     {
-        state_led_rgb = 1;
+        led_ctrl_set_mode(last_mode_led_rgb);
     }
 }
 
@@ -356,11 +367,17 @@ void led_ctrl_toggle_color(void)
 void led_ctrl_toggle_blink_time(void)
 {
     mode_led_rgb = BLINK_NOW_STATE;
-    current_index = (current_index + 1) % num_values;
-    time_for_blink_mode = blink_time_use[current_index];
+    blink_timer_select = (blink_timer_select + 1) % num_values;
+    time_for_blink_mode = blink_time_use[blink_timer_select];
 }
 
-uint32_t led_ctrl_get_time_use_blink(void){
+/**
+ * @brief
+ *
+ * @return uint32_t
+ */
+uint32_t led_ctrl_get_time_use_blink(void)
+{
     return time_for_blink_mode;
 }
 #endif
@@ -415,7 +432,7 @@ void led_ctrl_app(void *pvParameters)
             default:
                 led_ctrl_off_state();
                 led_ctrl_set_mode(ERRO);
-                ESP_LOGE(TAG, "Status requested incorrect or to be implemented");
+                ESP_LOGE(TAG, "State requested incorrect or to be implemented");
                 break;
             }
             break;

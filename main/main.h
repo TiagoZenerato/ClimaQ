@@ -12,13 +12,14 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#define VERSION_CTRL_FW 115
+#define VERSION_CTRL_FW 117
 
 // language libraries (C).
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+#include <cJSON.h>
 
 // rtos libraries (FreeRTOS).
 #include "freertos/FreeRTOS.h"
@@ -37,6 +38,7 @@
 #include "Periph_Control/ButtonCtrl.h"
 #include "Periph_Control/LedCtrl.h"
 
+// Estrutura de dados do sensor dht22.
 typedef struct
 {
     float temperature;

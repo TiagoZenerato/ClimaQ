@@ -27,7 +27,6 @@ const char *mqtt_server = "broker.hivemq.com"; // url do broker
  * @param client Cliente MQTT.
  * @param event Evento MQTT.
  */
-// Example event handler function
 void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     esp_mqtt_event_handle_t event = event_data;
@@ -48,6 +47,21 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA received");
+        // Comparando o tópico
+        if (strncmp(event->topic, "climaQ/TrocarCor", event->topic_len) == 0)
+        {
+            // Comparando os dados
+            if (strncmp(event->data, "1", event->data_len) == 0)
+            {
+                led_ctrl_toggle_color();
+                mqtt_publish("climaQ/report", "Mensagem recebida!", strlen("Mensagem recebida"));
+            }
+            else if (strncmp(event->data, "0", event->data_len) == 0)
+            {
+               led_ctrl_set_state(OFF);
+                mqtt_publish("climaQ/report", "Mensagem recebida!", strlen("Mensagem recebida"));
+            }
+        }
         break;
     default:
         ESP_LOGI(TAG, "Other event id: %li", event_id);

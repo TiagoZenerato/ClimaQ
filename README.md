@@ -78,6 +78,12 @@ Antes de começar, certifique-se de que você tem os seguintes requisitos instal
 
    Você pode usar `Ctrl+]` para sair do monitoramento.
 
+# Observações para o teste: 
+ - O projeto está configurado para minha rede! Não deixe de trocar o ssid e password (Na linha 19 e 20 do arquivo WIFIctrl)
+ - No HiveMQ deve-se:
+   - Inscrever no tópico climaQ/report.
+   - Publicar no climaQ/TrocarCor (Se a mensagem enviada for 1 ele trocara a cor, se for 0 Ele irá desligar o led).
+
 ---
 
 Siga estes passos e você deve conseguir abrir, configurar e compilar seu projeto `ClimaQ` no VSCode usando o ESP-IDF v5.1.4. Se encontrar algum problema, sinta-se à vontade para me chamar!

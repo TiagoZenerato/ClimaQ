@@ -16,17 +16,17 @@
 #ifndef MQTT_CTRL_H
 #define MQTT_CTRL_H
 
-// language libraries (C).
+// Bibliotecas da linguagem (C).
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-// rtos libraries (FreeRTOS).
+// Bibliotecas do RTOS (FreeRTOS).
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
-// Framework Libraries (ESP-IDF).
+// Bibliotecas da Estrutura (ESP-IDF).
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_system.h"
@@ -36,18 +36,18 @@
 #include "mqtt_client.h"
 #include "cJSON.h"
 
-// Project libraries (climaQ).
+// Bibliotecas do projeto (climaQ).
 #include "../Periph_Control/LedCtrl.h"
 
-// Detalhes do broker MQTT
+// Variáveis para conectar-se ao broker MQTT.
 extern const int mqtt_port;                        
 extern const char *mqtt_server;     
 
-// Funções para uso externo
-void mqtt_deinit(void);
-esp_err_t mqtt_subscribe(const char *topic);
-esp_err_t mqtt_unsubscribe(const char *topic);
-esp_err_t mqtt_init(const char *uri, uint16_t port_use_connect);
-esp_err_t mqtt_publish(const char *topic, const char *payload, int len);
+// Funções para uso externo.
+extern void mqtt_deinit(void);
+extern esp_err_t mqtt_subscribe(const char *topic);
+extern esp_err_t mqtt_unsubscribe(const char *topic);
+extern esp_err_t mqtt_init(const char *uri, uint16_t port_use_connect);
+extern esp_err_t mqtt_publish(const char *topic, const char *payload, int len);
 
 #endif

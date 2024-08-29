@@ -15,17 +15,14 @@
  */
 #include "WifiCtrl.h"
 
-static int s_retry_num = 0;              // Contador de tentativas de reconexão.
-static const char *TAG = "WIFI_MANAGER"; // String utilizada para identificar as mensagens de log geradas pelo gerenciador de Wi-Fi.
+static int s_retry_num = 0;              /**< Contador de tentativas de reconexão. */
+const char *ssid = "ZENA2007";           /**< SSID da rede Wi-Fi à qual o dispositivo irá se conectar. */
+const char *password = "m130856z";       /**< Senha da rede Wi-Fi à qual o dispositivo irá se conectar. */
+static const char *TAG = "WIFI_MANAGER"; /**< String utilizada para identificar as mensagens de log geradas pelo gerenciador de Wi-Fi. */
 
-// Conectar-se a uma rede Wi-Fi
-const char *ssid = "ZENA2007";
-const char *password = "m130856z";
-
-// Declaração de struct para uso da lib
-static EventGroupHandle_t s_wifi_event_group;
-static esp_event_handler_instance_t instance_any_id;
-static esp_event_handler_instance_t instance_got_ip;
+static EventGroupHandle_t s_wifi_event_group;        /**< Handle para o grupo de eventos Wi-Fi. */
+static esp_event_handler_instance_t instance_any_id; /**< Handle para a instância de evento que lida com qualquer ID de evento Wi-Fi. */
+static esp_event_handler_instance_t instance_got_ip; /**< Handle para a instância de evento que lida com a obtenção de IP. */
 
 /**
  * @brief Manipulador de eventos Wi-Fi.

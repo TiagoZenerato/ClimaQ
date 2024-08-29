@@ -16,12 +16,17 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
-// language libraries (C).
+// Bibliotecas da linguagem (C).
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-// Framework Libraries (ESP-IDF).
+// Bibliotecas do RTOS (FreeRTOS).
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+
+// Bibliotecas da Estrutura (ESP-IDF).
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
@@ -30,16 +35,11 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-// rtos libraries (FreeRTOS).
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
+#define MAXIMUM_RETRY 5         /**< Definição da quantidade de tentativas de conexão*/
+#define WIFI_FAIL_BIT BIT1      /**< Definição do estado de desconectado*/
+#define WIFI_CONNECTED_BIT BIT0 /**< Definição do estado de conectado*/
 
-#define MAXIMUM_RETRY 5         // Definição da quantidade de tentativas de conexão
-#define WIFI_CONNECTED_BIT BIT0 // Definição do estado de conectado
-#define WIFI_FAIL_BIT BIT1      // Definição do estado de desconectado
-
-// Conectar-se a uma rede Wi-Fi
+// Variáveis para conectar-se a uma rede Wi-Fi
 extern const char *ssid;
 extern const char *password;
 

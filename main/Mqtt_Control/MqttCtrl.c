@@ -15,11 +15,10 @@
 
 #include "MqttCtrl.h"
 
-static esp_mqtt_client_handle_t client = NULL;
-static const char *TAG = "MQTT_LIB";
-
-const int mqtt_port = 1883;                    // Porta fornecida
-const char *mqtt_server = "broker.hivemq.com"; // url do broker
+const int mqtt_port = 1883;                    /**< Porta utilizada para a conexão MQTT. */
+static const char *TAG = "MQTT_LIB";           /**< Tag de log para a biblioteca MQTT. */
+const char *mqtt_server = "broker.hivemq.com"; /**< URL do broker MQTT. */
+static esp_mqtt_client_handle_t client = NULL; /**< Handle do cliente MQTT. */
 
 /**
  * @brief Callback para eventos MQTT.
@@ -58,7 +57,7 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
             }
             else if (strncmp(event->data, "0", event->data_len) == 0)
             {
-               led_ctrl_set_state(OFF);
+                led_ctrl_set_state(OFF);
                 mqtt_publish("climaQ/report", "Mensagem recebida!", strlen("Mensagem recebida"));
             }
         }

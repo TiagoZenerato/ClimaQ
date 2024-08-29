@@ -1,7 +1,11 @@
 /**
- * @file LedCtrl.cpp
- * @author your name (you@domain.com)
- * @brief
+ * @file LedCtrl.c
+ * @author Tiago Zenerato (dr.zenerato@gmail.com)
+ * @brief Controle de LEDs endereçáveis WS2812B.
+ *
+ * Este arquivo implementa as funções para controle de LEDs endereçáveis WS2812B,
+ * incluindo configuração, controle de cores e modos de operação do LED.
+ *
  * @version 0.1
  * @date 2024-08-18
  *
@@ -11,27 +15,25 @@
 
 #include "LedCtrl.h"
 
-static const char *TAG = "LedCtrl";
+static uint8_t mode_led_rgb = 0;                                     /**< Variável de controle do modo de operação do led.*/
+static uint8_t state_led_rgb = 0;                                    /**< Variável de controle para o estado de operação do led.*/
+static const char *TAG = "LedCtrl";                                  /**< String utilizada para identificar as mensagens de log geradas pelo gerenciador de LED. */
+static uint8_t last_mode_led_rgb = 0;                                /**< Variável para armazenar o último modo de operação do led.*/
+static uint8_t blink_timer_select = 0;                               /**< Variável de controle para selecionar os tempos de blink disponíveis.*/
+static uint8_t last_state_led_rgb = 0;                               /**< Variável para armazenar o último estado de operação do led.*/
+static uint32_t time_for_blink_mode = 0;                             /**< Variável para armazenar o time selecionado para usar no blink.*/
+static uint32_t blink_time_use[] = {BLINK_TIME_1, BLINK_TIME_2};     /**< Vetor de tempos disponíveis para utilizar.*/
+int num_values = sizeof(blink_time_use) / sizeof(blink_time_use[0]); /**< Variável para calcular a partir do vetor a quantidade de possíveis tempos.*/
 
-static uint8_t mode_led_rgb = 0;                                     // Variável de controle do modo de operação do led.
-static uint8_t blink_timer_select = 0;                               // Variável de controle para selecionar os tempos de blink disponíveis.
-static uint8_t state_led_rgb = 0;                                    // Variável de controle para o estado de operação do led.
-static uint8_t last_mode_led_rgb = 0;                                // Variável para armazenar o último modo de operação do led
-static uint8_t last_state_led_rgb = 0;                               // Variável para armazenar o último estado de operação do led
-static uint32_t time_for_blink_mode = 0;                             // Variável para armazenar o time selecionado para usar no blink
-static uint32_t blink_time_use[] = {BLINK_TIME_1, BLINK_TIME_2};     // Vetor de tempos disponíveis para utilizar
-int num_values = sizeof(blink_time_use) / sizeof(blink_time_use[0]); // Variável para calcular a partir do vetor a quantidade de possíveis tempos.
-
-led_strip_handle_t led_strip; // Estrutura de controle para usar o led da placa.
+led_strip_handle_t led_strip; /**< Estrutura de controle para usar o led da placa.*/
 
 /**
- * @brief
+ * @brief Bloco de separação para funções internas
  *
  */
 #ifndef INTERNAL_LIB_FUNCTIONS
 /**
- * @brief
- *
+ * @brief Desliga todos os LEDs para limpar todos os pixels.
  */
 void led_ctrl_off_state(void)
 {
@@ -40,8 +42,7 @@ void led_ctrl_off_state(void)
 }
 
 /**
- * @brief
- *
+ * @brief Define a cor do LED como vermelho.
  */
 void led_ctrl_red_state(void)
 {
@@ -56,8 +57,7 @@ void led_ctrl_red_state(void)
 }
 
 /**
- * @brief
- *
+ * @brief Define a cor do LED como verde.
  */
 void led_ctrl_green_state(void)
 {
@@ -72,8 +72,7 @@ void led_ctrl_green_state(void)
 }
 
 /**
- * @brief
- *
+ * @brief Define a cor do LED como azul.
  */
 void led_ctrl_blue_state(void)
 {
@@ -88,8 +87,7 @@ void led_ctrl_blue_state(void)
 }
 
 /**
- * @brief
- *
+ * @brief Define a cor do LED como amarelo.
  */
 void led_ctrl_yellow_state(void)
 {
@@ -104,9 +102,7 @@ void led_ctrl_yellow_state(void)
 }
 
 /**
- * @brief
- *
- * @param funtion
+ * @brief Modo de espera para conexão, piscando o LED azul.
  */
 void led_ctrl_waiting_connect_mode(void)
 {
@@ -117,8 +113,7 @@ void led_ctrl_waiting_connect_mode(void)
 }
 
 /**
- * @brief
- *
+ * @brief Modo conectado, piscando o LED verde.
  */
 void led_ctrl_connected_mode(void)
 {
@@ -132,8 +127,7 @@ void led_ctrl_connected_mode(void)
 }
 
 /**
- * @brief  Modo de erro, piscando o LED vermelho
- *
+ * @brief Modo de erro, piscando o LED vermelho.
  */
 void led_ctrl_erro_mode(void)
 {
@@ -185,8 +179,7 @@ void led_ctrl_erro_mode(void)
 }
 
 /**
- * @brief
- *
+ * @brief Modo de envio de novos dados, piscando o LED azul.
  */
 void led_ctrl_new_data_send_mode(void)
 {
@@ -196,8 +189,7 @@ void led_ctrl_new_data_send_mode(void)
 }
 
 /**
- * @brief
- *
+ * @brief Modo de piscar o LED baseado no estado definido.
  */
 void led_ctrl_blink_mode(void)
 {
@@ -253,14 +245,14 @@ void led_ctrl_blink_mode(void)
 #endif
 
 /**
- * @brief
+ * @brief Bloco de separação para funções internas
  *
  */
 #ifndef EXTERNAL_LIB_FUNCTION
 /**
- * @brief
+ * @brief Inicializa o controle do LED strip, configurando o RMT e o objeto LED strip.
  *
- * @return esp_err_t
+ * @return esp_err_t Retorna `ESP_OK` se a inicialização for bem-sucedida, ou um código de erro em caso contrário.
  */
 esp_err_t led_ctrl_init(void)
 {
@@ -292,9 +284,9 @@ esp_err_t led_ctrl_init(void)
 }
 
 /**
- * @brief
+ * @brief Define o estado atual do LED RGB.
  *
- * @param state
+ * @param state Novo estado do LED RGB.
  */
 void led_ctrl_set_state(uint8_t state)
 {
@@ -303,9 +295,9 @@ void led_ctrl_set_state(uint8_t state)
 }
 
 /**
- * @brief
+ * @brief Obtém o estado atual do LED RGB.
  *
- * @return uint8_t
+ * @return uint8_t O estado atual do LED RGB.
  */
 uint8_t led_ctrl_get_state(void)
 {
@@ -313,9 +305,9 @@ uint8_t led_ctrl_get_state(void)
 }
 
 /**
- * @brief
+ * @brief Define o modo atual do LED RGB.
  *
- * @param mode
+ * @param mode Novo modo do LED RGB.
  */
 void led_ctrl_set_mode(uint8_t mode)
 {
@@ -324,9 +316,9 @@ void led_ctrl_set_mode(uint8_t mode)
 }
 
 /**
- * @brief
+ * @brief Obtém o modo atual do LED RGB.
  *
- * @return uint8_t
+ * @return uint8_t O modo atual do LED RGB.
  */
 uint8_t led_ctrl_get_mode(void)
 {
@@ -334,8 +326,10 @@ uint8_t led_ctrl_get_mode(void)
 }
 
 /**
- * @brief
+ * @brief Alterna a cor do LED RGB.
  *
+ * Define o modo como `RECEIVED_COMMAND` e alterna entre os estados do LED RGB. Se o estado for `YELLOW`, volta para o estado `1`, caso contrário, incrementa o estado.
+ * Se o modo anterior foi `BLINK_NOW_STATE`, restaura o modo anterior.
  */
 void led_ctrl_toggle_color(void)
 {
@@ -361,8 +355,9 @@ void led_ctrl_toggle_color(void)
 }
 
 /**
- * @brief
+ * @brief Alterna o tempo de piscar do LED.
  *
+ * Define o modo como `BLINK_NOW_STATE` e alterna entre os tempos de piscar disponíveis.
  */
 void led_ctrl_toggle_blink_time(void)
 {
@@ -372,9 +367,9 @@ void led_ctrl_toggle_blink_time(void)
 }
 
 /**
- * @brief
+ * @brief Obtém o tempo atual para o modo de piscar do LED.
  *
- * @return uint32_t
+ * @return uint32_t O tempo atual para o modo de piscar.
  */
 uint32_t led_ctrl_get_time_use_blink(void)
 {
@@ -383,9 +378,12 @@ uint32_t led_ctrl_get_time_use_blink(void)
 #endif
 
 /**
- * @brief
+ * @brief Função principal para controle do LED RGB.
  *
- * @param pvParameters
+ * Esta função gerencia o comportamento do LED RGB com base no modo atual (`mode_led_rgb`), 
+ * alternando entre diferentes funções de controle de LED. Ela também limpa o modo de operação após a execução de certos modos.
+ *
+ * @param pvParameters Parâmetros passados para a tarefa (não utilizados neste caso).
  */
 void led_ctrl_app(void *pvParameters)
 {
@@ -459,8 +457,11 @@ void led_ctrl_app(void *pvParameters)
 }
 
 /**
- * @brief
+ * @brief Teste de piscar o LED RGB.
  *
+ * Esta função alterna o estado do LED RGB entre ligado e desligado a cada 500 ms,
+ * e define a cor do LED como vermelha (30 de intensidade) quando ligado. A função 
+ * entra em um loop infinito piscando o LED strip para testes visuais.
  */
 void led_blink_rgb_teste(void)
 {

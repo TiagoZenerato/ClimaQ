@@ -1,7 +1,12 @@
 /**
  * @file ButtonCtrl.c
- * @author your name (you@domain.com)
- * @brief
+ * @author Tiago Zenerato (dr.zenerato@gmail.com)
+ * @brief Controle de botão com debounce e detecção de pressionamento longo.
+ *
+ * Este arquivo implementa as funcionalidades necessárias para o controle de um botão,
+ * incluindo debounce, detecção de bordas, e temporização para diferenciar entre um
+ * pressionamento curto e um pressionamento longo.
+ *
  * @version 0.1
  * @date 2024-08-18
  *
@@ -11,31 +16,34 @@
 
 #include "ButtonCtrl.h"
 
-bool btState = false;                 //
-bool bt_state = false;                //
-bool bt_pressed = false;              //
-static bool timer_started = false;    //
-uint32_t last_debounce_time = 0;      //
-uint32_t debounce_delay = 50;         // Tempo de debounce em milissegundos
-uint32_t button_press_time = 0;       //
-uint32_t long_press_threshold = 3000; // Threshold para considerar um pressionamento longo
-
-// Variável global para armazenar o estado do botão
-button_press_mode_t press_mode = BUTTON_PRESS_NONE;
-static esp_timer_handle_t press_timer;
-
-// Configuração do pino do botão
-gpio_config_t io_conf = {
-    .intr_type = GPIO_INTR_ANYEDGE,         /*< Para detectar uma borda de descida*/
-    .mode = GPIO_MODE_INPUT,                /*<*/
-    .pin_bit_mask = (1ULL << BUTTON_GPIO),  /*<*/
-    .pull_up_en = GPIO_PULLUP_ENABLE,       /*< Habilitar pull-up interno*/
-    .pull_down_en = GPIO_PULLDOWN_DISABLE}; /*<*/
+bool bt_state = false;                              /**< Estado atual do botão. */
+bool bt_pressed = false;                            /**< Indica se o botão foi pressionado. */
+uint32_t debounce_delay = 50;                       /**< Tempo de debounce em milissegundos. */
+uint32_t button_press_time = 0;                     /**< Tempo de pressionamento do botão em milissegundos. */
+uint32_t last_debounce_time = 0;                    /**< Último tempo de debounce em milissegundos. */
+static bool timer_started = false;                  /**< Indica se o temporizador foi iniciado. */
+uint32_t long_press_threshold = 3000;               /**< Threshold para considerar um pressionamento longo (em milissegundos). */
+static esp_timer_handle_t press_timer;              /**< Handle do temporizador para controle de pressionamento do botão. */
+button_press_mode_t press_mode = BUTTON_PRESS_NONE; /**< Modo de pressionamento do botão (curto, longo, etc.). */
 
 /**
- * @brief
+ * @brief Configuração do pino do botão. 
+ */
+gpio_config_t io_conf = {
+    .intr_type = GPIO_INTR_ANYEDGE,         /**< Para detectar uma borda de descida */
+    .mode = GPIO_MODE_INPUT,                /**< Configura o pino como entrada */
+    .pin_bit_mask = (1ULL << BUTTON_GPIO),  /**< Máscara de bits para o pino do botão */
+    .pull_up_en = GPIO_PULLUP_ENABLE,       /**< Habilitar pull-up interno */
+    .pull_down_en = GPIO_PULLDOWN_DISABLE}; /**< Desabilitar pull-down interno */
+
+/**
+ * @brief Manipulador de interrupção para o botão.
  *
- * @param arg
+ * Esta função é chamada quando uma interrupção é gerada pelo botão,
+ * detectando tanto a borda de subida quanto a de descida para determinar
+ * se o botão foi pressionado ou solto.
+ *
+ * @param arg Argumento opcional passado para a função (não utilizado).
  */
 void IRAM_ATTR button_isr_handler(void *arg)
 {
@@ -87,9 +95,12 @@ void IRAM_ATTR button_isr_handler(void *arg)
 }
 
 /**
- * @brief
+ * @brief Callback do temporizador de pressionamento do botão.
  *
- * @param arg
+ * Esta função é chamada quando o temporizador configurado para detectar
+ * um pressionamento longo expira.
+ *
+ * @param arg Argumento opcional passado para a função (não utilizado).
  */
 void IRAM_ATTR timer_callback(void *arg)
 {
@@ -97,8 +108,9 @@ void IRAM_ATTR timer_callback(void *arg)
 }
 
 /**
- * @brief
+ * @brief Inicializa o botão.
  *
+ * Configura o pino do botão, o temporizador e instala o serviço de interrupção.
  */
 void init_button(void)
 {
@@ -117,9 +129,12 @@ void init_button(void)
 }
 
 /**
- * @brief
+ * @brief Função principal de controle do botão.
  *
- * @param pvParameters
+ * Esta função pode ser utilizada em uma task FreeRTOS para monitorar o estado
+ * do botão e tomar ações apropriadas.
+ *
+ * @param pvParameters Parâmetro opcional passado para a função (não utilizado).
  */
 void button_ctrl_app(void *pvParameters)
 {

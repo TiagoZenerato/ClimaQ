@@ -1,27 +1,30 @@
 /**
  * @file main.c
- * @author your name (you@domain.com)
- * @brief
+ * @author Tiago Zenerato (dr.zenerato@gmail.com)
+ * @brief Arquivo principal da aplicação ClimaQ.
  * @version 0.1
  * @date 2024-08-18
  *
  * @copyright Copyright (c) 2024
  *
+ * Este arquivo contém a lógica principal da aplicação ClimaQ, incluindo a configuração de tarefas,
+ * leitura de sensores, controle de LEDs e comunicação via MQTT.
  */
 
 #include "main.h"
 
-// String utilizada para identificar as mensagens de log.
-static const char *TAG = "MAIN";
-static const char *TAG_REPORT = "[SYS-INFO]";
+static const char *TAG = "MAIN";              /**< Tag de log para mensagens gerais. */
+static const char *TAG_REPORT = "[SYS-INFO]"; /**< Tag de log para mensagens de relatório. */
 
-dht22_data_t sensor_data;
+dht22_data_t sensor_data; /**< Estrutura para armazenar os dados do sensor DHT22. */
 
-#ifndef INTERNAL_FUNCTIONS
 /**
- * @brief
- *
- * @param pvParameters
+ * @brief Tarefa responsável por gerar relatórios de status e publicar via MQTT.
+ * 
+ * Esta função cria um relatório JSON contendo informações sobre o estado do LED,
+ * temperatura, umidade e outros dados relevantes, e o publica em um tópico MQTT.
+ * 
+ * @param pvParameters Ponteiro para parâmetros de tarefa (não utilizado).
  */
 void status_report_app(void *pvParameters)
 {
@@ -89,10 +92,12 @@ void status_report_app(void *pvParameters)
         if (led_ctrl_get_mode() == BLINK_NOW_STATE)
         {
             ESP_LOGI(TAG_REPORT, "Led color: %s, Led state: %s, Interval: %li", Led_Color, Led_State, timer_for_blink);
-        }else{
+        }
+        else
+        {
             ESP_LOGI(TAG_REPORT, "Led color: %s, Led state: %s", Led_Color, Led_State);
         }
-        
+
         // Criando o objeto JSON
         cJSON *report_json = cJSON_CreateObject();
         cJSON_AddNumberToObject(report_json, "report_number", cont_report_send);
@@ -101,7 +106,7 @@ void status_report_app(void *pvParameters)
         cJSON_AddNumberToObject(report_json, "humidity", sensor_data.humidity);
         cJSON_AddStringToObject(report_json, "led_color", Led_Color);
         cJSON_AddStringToObject(report_json, "led_state", Led_State);
-        
+
         // Convertendo o JSON para string
         char *json_string = cJSON_Print(report_json);
 
@@ -118,8 +123,12 @@ void status_report_app(void *pvParameters)
 }
 
 /**
- * @brief
- *
+ * @brief Tarefa responsável por ler dados do sensor DHT22.
+ * 
+ * Esta função lê os dados de temperatura e umidade do sensor DHT22 e atualiza a estrutura
+ * `sensor_data` com os valores lidos.
+ * 
+ * @param pvParameters Ponteiro para parâmetros de tarefa (não utilizado).
  */
 void dht_sensor_app(void *pvParameters)
 {
@@ -141,8 +150,10 @@ void dht_sensor_app(void *pvParameters)
 }
 
 /**
- * @brief Set the AllTasksCore 0 object
- *
+ * @brief Cria e configura tarefas no núcleo 0.
+ * 
+ * Esta função cria as tarefas que serão executadas no núcleo 0 do ESP32, incluindo o controle
+ * de interrupção do botão e o relatório de status da aplicação.
  */
 void setAllTasksCore_0(void)
 {
@@ -152,8 +163,10 @@ void setAllTasksCore_0(void)
 }
 
 /**
- * @brief Set the AllTasksCore 1 object
- *
+ * @brief Cria e configura tarefas no núcleo 1.
+ * 
+ * Esta função cria as tarefas que serão executadas no núcleo 1 do ESP32, incluindo o controle
+ * do LED RGB (NeoPixel) e a leitura do sensor DHT22.
  */
 void setAllTasksCore_1(void)
 {
@@ -163,10 +176,12 @@ void setAllTasksCore_1(void)
 }
 
 /**
- * @brief
- *
- * @return ESP_OK
- * @return ESP_FAIL
+ * @brief Inicializa e configura o Wi-Fi.
+ * 
+ * Esta função inicializa o gerenciador de Wi-Fi, tenta conectar à rede especificada e
+ * verifica se a conexão foi bem-sucedida.
+ * 
+ * @return ESP_OK se a conexão for bem-sucedida, ESP_FAIL caso contrário.
  */
 esp_err_t wifi_start_all(void)
 {
@@ -201,10 +216,12 @@ esp_err_t wifi_start_all(void)
 }
 
 /**
- * @brief
- *
- * @return ESP_OK
- * @return ESP_FAIL
+ * @brief Inicializa e configura o cliente MQTT.
+ * 
+ * Esta função inicializa o cliente MQTT, conecta ao servidor e publica uma mensagem inicial.
+ * Além disso, se inscreve em um tópico para receber comandos.
+ * 
+ * @return ESP_OK se a inicialização for bem-sucedida, ESP_FAIL caso contrário.
  */
 esp_err_t mqtt_start_all(void)
 {
@@ -243,11 +260,13 @@ esp_err_t mqtt_start_all(void)
 
     return ESP_OK;
 }
-#endif
 
 /**
- * @brief função principal da aplicação.
+ * @brief Função principal da aplicação.
  * 
+ * Esta função é executada ao iniciar a aplicação. Ela configura o controle de LEDs, inicializa
+ * o botão e cria tarefas em diferentes núcleos. Também inicializa o serviço MQTT e configura
+ * o modo do LED de acordo com o resultado da inicialização.
  */
 void app_main(void)
 {
